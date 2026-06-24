@@ -1,73 +1,144 @@
-# React + TypeScript + Vite
+# CarShare 🚗 - Ride-Sharing Platform
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+> A modern, fully-featured ride-sharing booking application for the **Huế ↔ Đà Nẵng** route with support for 4 and 7-seater vehicles.
 
-Currently, two official plugins are available:
+## 🎯 Features
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+### ✨ Core Features
 
-## React Compiler
+- 🔐 **User Authentication** - Secure signup/login with email verification
+- 🔍 **Trip Search** - Find trips by route, date, and passenger count
+- 🪑 **Interactive Seat Selection** - Visual seat map for 4 & 7-seater vehicles
+- 💰 **Real-time Pricing** - Instant price calculation
+- 📅 **Booking Management** - View, edit, and cancel bookings
+- 📱 **Responsive Design** - Works on mobile, tablet, and desktop
+- 🔔 **Email Notifications** - Booking confirmations and updates
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+### 🎨 User Experience
 
-## Expanding the ESLint configuration
+- Beautiful gradient UI with Ant Design components
+- Smooth animations and transitions
+- Mobile-optimized with touch support
+- Accessibility-first design
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+## 🚀 Quick Start
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+### 1. Clone & Install
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+git clone <repo-url>
+cd CarBooking
+npm install
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+### 2. Setup Environment
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+Create `.env.local`:
+
+```env
+VITE_SUPABASE_URL=your_supabase_url
+VITE_SUPABASE_PUBLISHABLE_KEY=your_public_key
+```
+
+### 3. Initialize Database
+
+Run SQL files in Supabase dashboard:
+
+- `supabase/migrations/20260623080818_init_schema.sql`
+- `supabase/seed.sql`
+
+### 4. Start Development
+
+```bash
+npm run dev
+```
+
+Open `http://localhost:5173` in your browser.
+
+**👉 See [QUICKSTART.md](QUICKSTART.md) for detailed setup instructions**
+
+## 📚 Documentation
+
+- **[QUICKSTART.md](QUICKSTART.md)** - 5-minute setup guide
+- **[SETUP_GUIDE.md](SETUP_GUIDE.md)** - Complete setup & features
+- **[IMPLEMENTATION_GUIDE.md](IMPLEMENTATION_GUIDE.md)** - Architecture & deployment
+
+## 🛣️ Routes & Pricing
+
+### Huế ↔ Đà Nẵng
+
+- **Distance**: 108 km
+- **Duration**: ~2.5 hours
+- **Price**: 150,000 VND per seat
+- **Vehicles**: 4-seater Sedan & 7-seater Minivan
+
+## 📋 Pages Implemented
+
+- ✅ Home (Landing & Trip Search)
+- ✅ Login & Signup (Authentication)
+- ✅ Trip Listing (with filters)
+- ✅ Seat Selection (Interactive Map)
+- ✅ Booking Confirmation
+- ✅ My Bookings (History)
+- ✅ Booking Details (Single Booking)
+
+## 🧪 Available Scripts
+
+```bash
+npm run dev       # Start dev server
+npm run build     # Build for production
+npm run preview   # Preview production build
+npm run lint      # Run ESLint
+```
+
+## 🏗️ Architecture
+
+- **Frontend**: React 19 + TypeScript + Vite
+- **Styling**: Tailwind CSS + Ant Design
+- **State**: Zustand
+- **Backend**: Supabase (PostgreSQL)
+- **Auth**: Supabase Auth
+- **Routing**: React Router v8
+
+## 🔐 Features
+
+- ✅ Email/Password Authentication
+- ✅ Protected Routes with Auth Guards
+- ✅ Row-Level Security (RLS) on database
+- ✅ Real-time Seat Availability
+- ✅ Instant Price Calculation
+- ✅ Booking Cancellation
+- ✅ Mobile Responsive
+
+## 🎉 Status
+
+- ✅ MVP Complete
+- ✅ All core features implemented
+- ✅ Production ready
+- ⏳ Payment integration (planned)
+  import reactDom from 'eslint-plugin-react-dom'
 
 export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
+globalIgnores(['dist']),
+{
+files: ['**/*.{ts,tsx}'],
+extends: [
+// Other configs...
+// Enable lint rules for React
+reactX.configs['recommended-typescript'],
+// Enable lint rules for React DOM
+reactDom.configs.recommended,
+],
+languageOptions: {
+parserOptions: {
+project: ['./tsconfig.node.json', './tsconfig.app.json'],
+tsconfigRootDir: import.meta.dirname,
+},
+// other options...
+},
+},
 ])
+
+```
+
 ```
