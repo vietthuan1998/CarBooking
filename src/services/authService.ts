@@ -1,4 +1,4 @@
-import { supabase } from "@/utils/supabase";
+import { supabase } from "../utils/supabase";
 
 export interface User {
   id: string;
@@ -45,7 +45,6 @@ export async function signUp(
     if (data.user) {
       const { error: profileError } = await supabase.from("profiles").insert({
         id: data.user.id,
-        email: data.user.email,
         full_name: fullName,
         phone,
         role: "customer",
@@ -122,7 +121,7 @@ export async function getCurrentUser() {
 /**
  * Get user profile data
  */
-export async function getUserProfile(userId: string) {
+export async function getUserProfile(userId: string): Promise<Profile | null> {
   try {
     const { data, error } = await supabase
       .from("profiles")
@@ -131,7 +130,7 @@ export async function getUserProfile(userId: string) {
       .single();
 
     if (error) throw error;
-    return data;
+    return data as Profile;
   } catch (error) {
     console.error("Error fetching user profile:", error);
     return null;
@@ -146,7 +145,6 @@ export async function updateUserProfile(
   updates: {
     full_name?: string;
     phone?: string;
-    avatar_url?: string;
   },
 ) {
   try {
@@ -178,7 +176,23 @@ export function onAuthStateChange(callback: (user: User | null) => void) {
 
   return subscription;
 }
+export interface Profile {
+  id: string;
+  full_name: string;
+  phone: string | null;
+  role: "admin" | "dispatcher" | "driver" | "customer";
+  status: "active" | "inactive" | "blocked";
+  created_at: string;
+}
+export async function getCurrentProfile(): Promise<Profile | null> {
+  const user = await getCurrentUser();
 
+  if (!user) {
+    return null;
+  }
+
+  return getUserProfile(user.id);
+}
 // Note: this file might still have type mismatches in current project config.
 
 
