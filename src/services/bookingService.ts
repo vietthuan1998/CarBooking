@@ -111,7 +111,7 @@ export async function getUserBookings(
     return (data || []).map((booking) => ({
       ...booking,
       seats:
-        booking.trip_seats?.map((ts) => ({
+        booking.trip_seats?.map((ts: TripSeatResponse) => ({
           seat_number: ts.seats?.seat_number,
         })) || [],
     }));
