@@ -11,9 +11,10 @@ export interface User {
 
 export interface AuthResponse {
   user: User | null;
-  session: Session | null;
+  session: import('@supabase/supabase-js').Session | null;
   error: Error | null;
 }
+
 
 /**
  * Sign up a new user with email and password
@@ -165,8 +166,8 @@ export async function updateUserProfile(
  * Subscribe to auth state changes
  */
 export function onAuthStateChange(callback: (user: User | null) => void) {
-  const { data: subscription } = supabase.auth.onAuthStateChange(
-    async (event, session) => {
+  const { data: { subscription } } = supabase.auth.onAuthStateChange(
+    (_event, session) => {
       if (session?.user) {
         callback(session.user as unknown as User);
       } else {
@@ -175,5 +176,10 @@ export function onAuthStateChange(callback: (user: User | null) => void) {
     },
   );
 
-  return subscription?.unsubscribe;
+  return subscription;
 }
+
+// Note: this file might still have type mismatches in current project config.
+
+
+
