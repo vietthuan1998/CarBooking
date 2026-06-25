@@ -11,10 +11,9 @@ export interface User {
 
 export interface AuthResponse {
   user: User | null;
-  session: import('@supabase/supabase-js').Session | null;
+  session: import("@supabase/supabase-js").Session | null;
   error: Error | null;
 }
-
 
 /**
  * Sign up a new user with email and password
@@ -41,19 +40,19 @@ export async function signUp(
       return { user: null, session: null, error };
     }
 
-    // Create user profile in the profiles table
-    if (data.user) {
-      const { error: profileError } = await supabase.from("profiles").insert({
-        id: data.user.id,
-        full_name: fullName,
-        phone,
-        role: "customer",
-      });
+    // // Create user profile in the profiles table
+    // if (data.user) {
+    //   const { error: profileError } = await supabase.from("profiles").insert({
+    //     id: data.user.id,
+    //     full_name: fullName,
+    //     phone,
+    //     role: "customer",
+    //   });
 
-      if (profileError) {
-        console.error("Error creating profile:", profileError);
-      }
-    }
+    //   if (profileError) {
+    //     console.error("Error creating profile:", profileError);
+    //   }
+    // }
 
     return {
       user: data.user as unknown as User,
@@ -109,9 +108,12 @@ export async function signOut(): Promise<{ error: Error | null }> {
  */
 export async function getCurrentUser() {
   try {
-    const { data, error } = await supabase.auth.getUser();
+    const {
+      data: { user },
+      error,
+    } = await supabase.auth.getUser();
     if (error) return null;
-    return data.user as unknown as User;
+    return user as User;
   } catch (error) {
     console.error("Error getting current user:", error);
     return null;
@@ -164,15 +166,15 @@ export async function updateUserProfile(
  * Subscribe to auth state changes
  */
 export function onAuthStateChange(callback: (user: User | null) => void) {
-  const { data: { subscription } } = supabase.auth.onAuthStateChange(
-    (_event, session) => {
-      if (session?.user) {
-        callback(session.user as unknown as User);
-      } else {
-        callback(null);
-      }
-    },
-  );
+  const {
+    data: { subscription },
+  } = supabase.auth.onAuthStateChange((_event, session) => {
+    if (session?.user) {
+      callback(session.user as unknown as User);
+    } else {
+      callback(null);
+    }
+  });
 
   return subscription;
 }
@@ -190,10 +192,6 @@ export async function getCurrentProfile(): Promise<Profile | null> {
   if (!user) {
     return null;
   }
-
   return getUserProfile(user.id);
 }
 // Note: this file might still have type mismatches in current project config.
-
-
-

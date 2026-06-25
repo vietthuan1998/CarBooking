@@ -1,23 +1,37 @@
-import { useState } from 'react';
-import { NavLink } from 'react-router-dom';
+import { signOut } from "@/services/authService";
+import { useAuthStore } from "@/stores/authStore";
+import { useState } from "react";
+import { NavLink, useNavigate } from "react-router-dom";
 
 const menuItems = [
-  { name: 'Dashboard', path: '/dashboard', icon: '📊' },
-  { name: 'Booking', path: '/bookings', icon: '📅' },
-  { name: 'Điều phối', path: '/dispatch', icon: '🔀' },
-  { name: 'Quản lý xe', path: '/vehicles', icon: '🚐' },
-  { name: 'Quản lý tài xế', path: '/drivers', icon: '👨‍✈️' },
-  { name: 'Khách hàng', path: '/customers', icon: '👥' },
-  { name: 'Đăng ký', path: '/signup', icon: '✍️' },
+  { name: "Dashboard", path: "/dashboard", icon: "📊" },
+  { name: "Booking", path: "/bookings", icon: "📅" },
+  { name: "Điều phối", path: "/dispatch", icon: "🔀" },
+  { name: "Quản lý xe", path: "/vehicles", icon: "🚐" },
+  { name: "Quản lý tài xế", path: "/drivers", icon: "👨‍✈️" },
+  { name: "Khách hàng", path: "/customers", icon: "👥" },
+  { name: "Đăng ký", path: "/signup", icon: "✍️" },
 ];
 
 export default function Sidebar() {
+  const { profile } = useAuthStore();
+  console.log("    profile,", profile);
+  const navigate = useNavigate();
   const [isCollapsed, setIsCollapsed] = useState(false);
+
+  const handleLogout = async () => {
+    const { error } = await signOut();
+
+    if (error) {
+      console.error(error);
+    }
+    navigate("/login", { replace: true });
+  };
 
   return (
     <aside
       className={`sticky top-0 h-screen shrink-0 bg-gradient-to-b from-[#06161A] via-[#0A242A] to-[#061216] text-white shadow-[8px_0_30px_rgba(0,0,0,0.2)] transition-all duration-300 ${
-        isCollapsed ? 'w-20' : 'w-72'
+        isCollapsed ? "w-20" : "w-72"
       }`}
     >
       <div className="relative flex h-full flex-col">
@@ -26,16 +40,16 @@ export default function Sidebar() {
           type="button"
           onClick={() => setIsCollapsed(!isCollapsed)}
           className="absolute -right-3 top-7 z-20 flex h-7 w-7 items-center justify-center rounded-full border border-white/10 bg-[#0B252C] text-xs text-white shadow-lg transition hover:bg-emerald-500"
-          title={isCollapsed ? 'Mở rộng sidebar' : 'Thu gọn sidebar'}
+          title={isCollapsed ? "Mở rộng sidebar" : "Thu gọn sidebar"}
         >
-          {isCollapsed ? '›' : '‹'}
+          {isCollapsed ? "›" : "‹"}
         </button>
 
         {/* Logo */}
-        <div className={isCollapsed ? 'px-3 pt-6 pb-4' : 'px-5 pt-6 pb-4'}>
+        <div className={isCollapsed ? "px-3 pt-6 pb-4" : "px-5 pt-6 pb-4"}>
           <div
             className={`rounded-2xl border border-white/10 bg-white/[0.04] shadow-lg transition-all duration-300 ${
-              isCollapsed ? 'p-3' : 'p-4'
+              isCollapsed ? "p-3" : "p-4"
             }`}
           >
             <div className="flex items-center gap-3">
@@ -76,12 +90,14 @@ export default function Sidebar() {
                 title={isCollapsed ? item.name : undefined}
                 className={({ isActive }) =>
                   [
-                    'group relative flex items-center rounded-2xl text-sm font-semibold transition-all duration-200',
-                    isCollapsed ? 'justify-center px-2 py-3' : 'gap-3 px-4 py-3.5',
+                    "group relative flex items-center rounded-2xl text-sm font-semibold transition-all duration-200",
+                    isCollapsed
+                      ? "justify-center px-2 py-3"
+                      : "gap-3 px-4 py-3.5",
                     isActive
-                      ? 'bg-gradient-to-r from-green-500 to-emerald-500 text-white shadow-lg shadow-green-500/25'
-                      : 'text-gray-300 hover:bg-white/[0.08] hover:text-white',
-                  ].join(' ')
+                      ? "bg-gradient-to-r from-green-500 to-emerald-500 text-white shadow-lg shadow-green-500/25"
+                      : "text-gray-300 hover:bg-white/[0.08] hover:text-white",
+                  ].join(" ")
                 }
               >
                 {({ isActive }) => (
@@ -92,11 +108,11 @@ export default function Sidebar() {
 
                     <span
                       className={[
-                        'flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-lg transition-all duration-200',
+                        "flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-lg transition-all duration-200",
                         isActive
-                          ? 'bg-white/20'
-                          : 'bg-white/[0.06] group-hover:bg-white/10',
-                      ].join(' ')}
+                          ? "bg-white/20"
+                          : "bg-white/[0.06] group-hover:bg-white/10",
+                      ].join(" ")}
                     >
                       {item.icon}
                     </span>
@@ -109,11 +125,11 @@ export default function Sidebar() {
 
                         <span
                           className={[
-                            'text-lg transition-all duration-200',
+                            "text-lg transition-all duration-200",
                             isActive
-                              ? 'translate-x-0 opacity-100'
-                              : '-translate-x-1 opacity-0 group-hover:translate-x-0 group-hover:opacity-100',
-                          ].join(' ')}
+                              ? "translate-x-0 opacity-100"
+                              : "-translate-x-1 opacity-0 group-hover:translate-x-0 group-hover:opacity-100",
+                          ].join(" ")}
                         >
                           ›
                         </span>
@@ -127,7 +143,7 @@ export default function Sidebar() {
         </nav>
 
         {/* Bottom section */}
-        <div className={isCollapsed ? 'px-3 pb-5' : 'px-4 pb-5'}>
+        <div className={isCollapsed ? "px-3 pb-5" : "px-4 pb-5"}>
           {!isCollapsed && (
             <div className="mb-4 rounded-2xl border border-emerald-400/20 bg-emerald-400/10 p-4">
               <p className="text-xs font-semibold text-emerald-300">
@@ -146,12 +162,12 @@ export default function Sidebar() {
           {/* User Info */}
           <div
             className={`rounded-2xl border border-white/10 bg-white/[0.05] ${
-              isCollapsed ? 'p-2' : 'p-3'
+              isCollapsed ? "p-2" : "p-3"
             }`}
           >
             <div
               className={`flex items-center ${
-                isCollapsed ? 'justify-center' : 'gap-3'
+                isCollapsed ? "justify-center" : "gap-3"
               }`}
             >
               <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-green-400 to-emerald-600 text-sm font-bold text-white shadow-md shadow-green-500/20">
@@ -162,15 +178,16 @@ export default function Sidebar() {
                 <>
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-bold text-white">
-                      Nguyễn Văn A
+                      {profile?.full_name}
                     </p>
                     <p className="truncate text-xs font-medium text-gray-400">
-                      Điều phối viên
+                      {profile?.role}
                     </p>
                   </div>
 
                   <button
                     type="button"
+                    onClick={() => handleLogout()}
                     className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/[0.06] text-gray-300 transition hover:bg-red-500/20 hover:text-red-300"
                     title="Đăng xuất"
                   >

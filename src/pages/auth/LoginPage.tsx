@@ -13,44 +13,45 @@ export default function LoginPage() {
   const [errorMessage, setErrorMessage] = useState("");
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
-  event.preventDefault();
+    event.preventDefault();
 
-  try {
-    setIsLoading(true);
-    setErrorMessage("");
+    try {
+      setIsLoading(true);
+      setErrorMessage("");
 
-    const { error } = await signIn(email, password);
+      const { error } = await signIn(email, password);
+      if (error) {
+        setErrorMessage("Email hoặc mật khẩu không đúng.");
+        throw error;
+      }
 
-    if (error) {
-      setErrorMessage("Email hoặc mật khẩu không đúng.");
-      return;
+      const profile = await getCurrentProfile();
+
+      if (!profile) {
+        setErrorMessage("Không tìm thấy hồ sơ người dùng trong hệ thống.");
+        return;
+      }
+
+      if (profile.status !== "active") {
+        setErrorMessage(
+          "Tài khoản của bạn đang bị khóa hoặc chưa được kích hoạt.",
+        );
+        return;
+      }
+
+      if (profile.role !== "admin" && profile.role !== "dispatcher") {
+        setErrorMessage("Bạn không có quyền truy cập trang quản trị.");
+        return;
+      }
+
+      navigate("/dashboard", { replace: true });
+    } catch (error) {
+      console.error(error);
+      setErrorMessage("Đăng nhập thất bại. Vui lòng thử lại.");
+    } finally {
+      setIsLoading(false);
     }
-
-    const profile = await getCurrentProfile();
-
-    if (!profile) {
-      setErrorMessage("Không tìm thấy hồ sơ người dùng trong hệ thống.");
-      return;
-    }
-
-    if (profile.status !== "active") {
-      setErrorMessage("Tài khoản của bạn đang bị khóa hoặc chưa được kích hoạt.");
-      return;
-    }
-
-    if (profile.role !== "admin" && profile.role !== "dispatcher") {
-      setErrorMessage("Bạn không có quyền truy cập trang quản trị.");
-      return;
-    }
-
-    navigate("/dashboard", { replace: true });
-  } catch (error) {
-    console.error(error);
-    setErrorMessage("Đăng nhập thất bại. Vui lòng thử lại.");
-  } finally {
-    setIsLoading(false);
   }
-}
   return (
     <div className="flex min-h-screen bg-[#F4F7F6]">
       <div className="hidden flex-1 bg-gradient-to-br from-[#06161A] via-[#0A242A] to-[#0F3D34] p-10 text-white lg:flex lg:flex-col lg:justify-between">
@@ -77,7 +78,8 @@ export default function LoginPage() {
           </h2>
 
           <p className="mt-5 text-base leading-7 text-gray-300">
-            Đăng nhập để theo dõi tình trạng chuyến đi, điều phối xe và xử lý booking trong hệ thống.
+            Đăng nhập để theo dõi tình trạng chuyến đi, điều phối xe và xử lý
+            booking trong hệ thống.
           </p>
         </div>
 
@@ -93,9 +95,7 @@ export default function LoginPage() {
               🔐
             </div>
 
-            <h1 className="text-3xl font-black text-gray-900">
-              Đăng nhập
-            </h1>
+            <h1 className="text-3xl font-black text-gray-900">Đăng nhập</h1>
 
             <p className="mt-2 text-sm text-gray-500">
               Dành cho Admin và Điều phối viên.
