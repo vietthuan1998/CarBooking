@@ -1,5 +1,4 @@
-export default function DashboardPage() {
-  return <div>Admin Dashboard</div>;
-  <h1>Admin Dashboard</h1>;
+export default function DispatchPage() {
+  return <div>Admin Dispatch</div>;
 }
 

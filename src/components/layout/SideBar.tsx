@@ -8,6 +8,7 @@ const menuItems = [
   { name: 'Quản lý xe', path: '/vehicles', icon: '🚐' },
   { name: 'Quản lý tài xế', path: '/drivers', icon: '👨‍✈️' },
   { name: 'Khách hàng', path: '/customers', icon: '👥' },
+  { name: 'Đăng ký', path: '/signup', icon: '✍️' },
 ];
 
 export default function Sidebar() {
