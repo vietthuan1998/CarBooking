@@ -1,20 +1,28 @@
-import type { Trip } from "./types";
 import { TripCard } from "./TripCard";
+import type { BookingForm, Trip } from "./types";
 
 interface Props {
   title: string;
   subtitle: string;
   trips: Trip[];
-  loadingTripId: string | null;
-  onBook: (trip: Trip) => void;
+  activeFormTripId: string | null;
+  onFormOpen: (tripId: string | null) => void;
+  form: BookingForm;
+  onFormChange: (updated: Partial<BookingForm>) => void;
+  onSuccess: (msg: string) => void;
+  onError: (msg: string) => void;
 }
 
 export function TripColumn({
   title,
   subtitle,
   trips,
-  loadingTripId,
-  onBook,
+  activeFormTripId,
+  onFormOpen,
+  form,
+  onFormChange,
+  onSuccess,
+  onError,
 }: Props) {
   return (
     <div className="flex-1 min-w-0">
@@ -32,8 +40,12 @@ export function TripColumn({
           <TripCard
             key={trip.id}
             trip={trip}
-            loadingTripId={loadingTripId}
-            onBook={onBook}
+            activeFormTripId={activeFormTripId}
+            onFormOpen={onFormOpen}
+            form={form}
+            onFormChange={onFormChange}
+            onSuccess={onSuccess}
+            onError={onError}
           />
         ))}
       </div>
