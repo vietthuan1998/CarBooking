@@ -10,12 +10,29 @@ import VehiclesPage from "./pages/admin/VehiclesPage";
 import Signup from "./pages/Signup";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 import NotFoundPage from "./pages/NotFoundPage";
+import BookingsPage from "./pages/booking/BookingsPage";
+
+import PublicRoute from "./components/auth/PublicRoute";
 
 function AppContent() {
   return (
     <Routes>
-      <Route path="/login" element={<LoginPage />} />
-      <Route path="/signup" element={<Signup />} />
+      <Route
+        path="/login"
+        element={
+          <PublicRoute>
+            <LoginPage />
+          </PublicRoute>
+        }
+      />
+      <Route
+        path="/signup"
+        element={
+          <PublicRoute>
+            <Signup />
+          </PublicRoute>
+        }
+      />
 
       <Route
         path="/"
@@ -30,6 +47,7 @@ function AppContent() {
         <Route path="dispatch" element={<DispatchPage />} />
         <Route path="vehicles" element={<VehiclesPage />} />
         <Route path="drivers" element={<DriversPage />} />
+        <Route path="bookings" element={<BookingsPage />} />
       </Route>
 
       {/* Catch all invalid routes */}

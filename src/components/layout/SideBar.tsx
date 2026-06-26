@@ -13,9 +13,13 @@ const menuItems = [
   { name: "Đăng ký", path: "/signup", icon: "✍️" },
 ];
 
-export default function Sidebar() {
+interface SidebarProps {
+  isOpen: boolean;
+  onClose: () => void;
+}
+
+export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   const { profile } = useAuthStore();
-  console.log("    profile,", profile);
   const navigate = useNavigate();
   const [isCollapsed, setIsCollapsed] = useState(false);
 
@@ -30,23 +34,14 @@ export default function Sidebar() {
 
   return (
     <aside
-      className={`sticky top-0 h-screen shrink-0 bg-gradient-to-b from-[#06161A] via-[#0A242A] to-[#061216] text-white shadow-[8px_0_30px_rgba(0,0,0,0.2)] transition-all duration-300 ${
+      className={`fixed inset-y-0 left-0 z-40 flex h-screen shrink-0 flex-col bg-gradient-to-b from-[#06161A] via-[#0A242A] to-[#061216] text-white shadow-[8px_0_30px_rgba(0,0,0,0.2)] transition-transform duration-300 ${
         isCollapsed ? "w-20" : "w-72"
-      }`}
+      } ${
+        isOpen ? "translate-x-0" : "-translate-x-full"
+      } lg:relative lg:translate-x-0 lg:flex`}
     >
       <div className="relative flex h-full flex-col">
-        {/* Button hide/show */}
-        <button
-          type="button"
-          onClick={() => setIsCollapsed(!isCollapsed)}
-          className="absolute -right-3 top-7 z-20 flex h-7 w-7 items-center justify-center rounded-full border border-white/10 bg-[#0B252C] text-xs text-white shadow-lg transition hover:bg-emerald-500"
-          title={isCollapsed ? "Mở rộng sidebar" : "Thu gọn sidebar"}
-        >
-          {isCollapsed ? "›" : "‹"}
-        </button>
-
-        {/* Logo */}
-        <div className={isCollapsed ? "px-3 pt-6 pb-4" : "px-5 pt-6 pb-4"}>
+        <div className="flex items-center justify-between px-5 pt-6 pb-4 lg:px-5">
           <div
             className={`rounded-2xl border border-white/10 bg-white/[0.04] shadow-lg transition-all duration-300 ${
               isCollapsed ? "p-3" : "p-4"
@@ -70,9 +65,28 @@ export default function Sidebar() {
               )}
             </div>
           </div>
+
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setIsCollapsed(!isCollapsed)}
+              className="hidden lg:flex absolute -right-3 top-7 z-20 h-7 w-7 items-center justify-center rounded-full border border-white/10 bg-[#0B252C] text-xs text-white shadow-lg transition hover:bg-emerald-500"
+              title={isCollapsed ? "Mở rộng sidebar" : "Thu gọn sidebar"}
+            >
+              {isCollapsed ? "›" : "‹"}
+            </button>
+
+            <button
+              type="button"
+              onClick={onClose}
+              className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-white/10 text-white transition hover:bg-white/20 lg:hidden"
+              title="Đóng menu"
+            >
+              ×
+            </button>
+          </div>
         </div>
 
-        {/* Menu */}
         <nav className="flex-1 overflow-y-auto px-3 py-2 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
           {!isCollapsed && (
             <div className="mb-3 px-3">
@@ -142,7 +156,6 @@ export default function Sidebar() {
           </div>
         </nav>
 
-        {/* Bottom section */}
         <div className={isCollapsed ? "px-3 pb-5" : "px-4 pb-5"}>
           {!isCollapsed && (
             <div className="mb-4 rounded-2xl border border-emerald-400/20 bg-emerald-400/10 p-4">
@@ -159,7 +172,6 @@ export default function Sidebar() {
             </div>
           )}
 
-          {/* User Info */}
           <div
             className={`rounded-2xl border border-white/10 bg-white/[0.05] ${
               isCollapsed ? "p-2" : "p-3"
