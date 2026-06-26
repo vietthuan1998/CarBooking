@@ -5,12 +5,14 @@ import { signUp } from "../services/authService";
 
 export default function Signup() {
   const navigate = useNavigate();
-  const { isAuthenticated, isLoading: isAuthLoading } = useAuthStore();
+  // const { isAuthenticated, isLoading: isAuthLoading } = useAuthStore();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
   const [phone, setPhone] = useState("");
   const [loading, setLoading] = useState(false);
+  const isAuthLoading = useAuthStore((s) => s.isLoading);
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
 
   // Redirect if already logged in
   useEffect(() => {
