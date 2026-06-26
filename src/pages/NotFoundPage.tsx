@@ -4,8 +4,8 @@ import { useAuthStore } from "@/stores/authStore";
 
 export default function NotFoundPage() {
   const navigate = useNavigate();
-  const { isAuthenticated, isLoading } = useAuthStore();
-
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const isLoading = useAuthStore((s) => s.isLoading);
   useEffect(() => {
     if (!isLoading) {
       // Redirect based on authentication status
@@ -24,4 +24,3 @@ export default function NotFoundPage() {
     </div>
   );
 }
-

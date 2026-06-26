@@ -57,9 +57,11 @@ function AppContent() {
 }
 
 export default function App() {
-  const { isLoading, initializeAuth } = useAuthStore();
+  const isLoading = useAuthStore((s) => s.isLoading);
+  const initializeAuth = useAuthStore((s) => s.initializeAuth);
 
   useEffect(() => {
+    console.log("initializeAuth");
     initializeAuth();
   }, [initializeAuth]);
 

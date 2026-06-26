@@ -49,8 +49,8 @@ export default function BookingsPage() {
         route:routes(route_name, origin, destination)
       `,
         )
-        .gte("planned_departure_time", today.toISOString())
-        .lt("planned_departure_time", tomorrow.toISOString())
+        // .gte("planned_departure_time", today.toISOString())
+        // .lt("planned_departure_time", tomorrow.toISOString())
         .order("planned_departure_time");
       if (error) {
         console.error(error);

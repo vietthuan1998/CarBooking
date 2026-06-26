@@ -19,7 +19,7 @@ interface SidebarProps {
 }
 
 export default function Sidebar({ isOpen, onClose }: SidebarProps) {
-  const { profile } = useAuthStore();
+  const profile = useAuthStore((s) => s.profile);
   const navigate = useNavigate();
   const [isCollapsed, setIsCollapsed] = useState(false);
 
