@@ -1,11 +1,11 @@
 // src/pages/admin/BookingsPage.tsx
 
 import { useCallback, useEffect, useState } from "react";
-import { supabase } from "../../utils/supabase"; // adjust path
+import { supabase } from "../../utils/supabase";
 import { TripColumn } from "../../components/booking/TripColumn";
-import { BookingModal } from "../../components/booking/BookingModal";
 import { Toast } from "../../components/booking/Toast";
-import type { Seat, Trip, TripSeat } from "../../components/booking/types";
+import { INITIAL_FORM } from "../../components/booking/types";
+import type { BookingForm, Trip } from "../../components/booking/types";
 
 type Direction = "hue_to_dest" | "dest_to_hue";
 
@@ -15,14 +15,10 @@ export default function BookingsPage() {
     dest_to_hue: [],
   });
   const [loading, setLoading] = useState(true);
-  const [loadingTripId, setLoadingTripId] = useState<string | null>(null);
-
-  // Modal state
-  const [activeTrip, setActiveTrip] = useState<Trip | null>(null);
-  const [tripSeats, setTripSeats] = useState<TripSeat[]>([]);
-  const [vehicleSeats, setVehicleSeats] = useState<Seat[]>([]);
-
-  // Toast
+  const [activeFormTripId, setActiveFormTripId] = useState<string | null>(null);
+  const [sharedForm, setSharedForm] = useState<BookingForm>(INITIAL_FORM);
+  const handleFormChange = (updated: Partial<BookingForm>) =>
+    setSharedForm((f) => ({ ...f, ...updated }));
   const [toast, setToast] = useState<{
     msg: string;
     type: "success" | "error";
@@ -36,21 +32,15 @@ export default function BookingsPage() {
   const fetchTrips = useCallback(async () => {
     try {
       setLoading(true);
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      const tomorrow = new Date(today);
-      tomorrow.setDate(tomorrow.getDate() + 2);
       const { data, error } = await supabase
         .from("trips")
         .select(
           `
-        id, trip_code, planned_departure_time, trip_status,
-        vehicle:vehicles(id, plate_number, vehicle_name, seat_count),
-        route:routes(route_name, origin, destination)
-      `,
+          id, trip_code, planned_departure_time, trip_status,
+          vehicle:vehicles(id, plate_number, vehicle_name, seat_count),
+          route:routes(route_name, origin, destination)
+        `,
         )
-        .gte("planned_departure_time", today.toISOString())
-        .lt("planned_departure_time", tomorrow.toISOString())
         .order("planned_departure_time");
       if (error) {
         console.error(error);
@@ -69,47 +59,6 @@ export default function BookingsPage() {
   useEffect(() => {
     fetchTrips();
   }, [fetchTrips]);
-
-  const handleBookClick = async (trip: Trip) => {
-    setLoadingTripId(trip.id);
-
-    const [tripSeatsRes, vehicleSeatsRes] = await Promise.all([
-      supabase
-        .from("trip_seats")
-        .select(
-          "id, seat_id, status, booking_id, seat:seats(id, seat_code, seat_order)",
-        )
-        .eq("trip_id", trip.id),
-      supabase
-        .from("seats")
-        .select("id, seat_code, seat_order")
-        .eq("vehicle_id", trip.vehicle.id)
-        .order("seat_order"),
-    ]);
-
-    setLoadingTripId(null);
-
-    if (tripSeatsRes.error || vehicleSeatsRes.error) {
-      showToast("Không tải được dữ liệu ghế", "error");
-      return;
-    }
-
-    setTripSeats((tripSeatsRes.data ?? []) as unknown as TripSeat[]);
-    setVehicleSeats((vehicleSeatsRes.data ?? []) as Seat[]);
-    setActiveTrip(trip);
-  };
-
-  const handleModalClose = () => {
-    setActiveTrip(null);
-    setTripSeats([]);
-    setVehicleSeats([]);
-  };
-
-  const handleBookingSuccess = () => {
-    handleModalClose();
-    showToast("Đặt vé thành công! 🎉");
-    fetchTrips();
-  };
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -151,8 +100,12 @@ export default function BookingsPage() {
               title="🚌 Huế → Đà Nẵng / Hội An"
               subtitle="Chiều đi"
               trips={trips.hue_to_dest}
-              loadingTripId={loadingTripId}
-              onBook={handleBookClick}
+              activeFormTripId={activeFormTripId}
+              onFormOpen={setActiveFormTripId}
+              form={sharedForm}
+              onFormChange={handleFormChange}
+              onSuccess={(msg) => showToast(msg, "success")}
+              onError={(msg) => showToast(msg, "error")}
             />
 
             <div className="w-px bg-gray-200 self-stretch mx-1" />
@@ -161,22 +114,16 @@ export default function BookingsPage() {
               title="🚌 Đà Nẵng / Hội An → Huế"
               subtitle="Chiều về"
               trips={trips.dest_to_hue}
-              loadingTripId={loadingTripId}
-              onBook={handleBookClick}
+              activeFormTripId={activeFormTripId}
+              onFormOpen={setActiveFormTripId}
+              form={sharedForm}
+              onFormChange={handleFormChange}
+              onSuccess={(msg) => showToast(msg, "success")}
+              onError={(msg) => showToast(msg, "error")}
             />
           </div>
         )}
       </div>
-
-      {activeTrip && (
-        <BookingModal
-          trip={activeTrip}
-          tripSeats={tripSeats}
-          seats={vehicleSeats}
-          onClose={handleModalClose}
-          onSuccess={handleBookingSuccess}
-        />
-      )}
 
       {toast && <Toast msg={toast.msg} type={toast.type} />}
     </div>

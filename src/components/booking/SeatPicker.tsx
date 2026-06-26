@@ -45,7 +45,7 @@ export function SeatPicker({
           layout={layout}
           width={260}
           height={140}
-          seatSize={seatCount > 5 ? 40 : 46}
+          seatSize={80}
           selectedSeats={selectedSeatOrders}
           disabledSeats={bookedOrders}
           onSeatClick={onSeatClick}

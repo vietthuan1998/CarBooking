@@ -47,9 +47,9 @@ export const useAuthStore = create<AuthState>((set) => ({
     // Subscribe to auth state changes
     const subscription = onAuthStateChange(async (user) => {
       if (user) {
-        set({ user, isAuthenticated: true });
         // Fetch profile data
         const profile = await getCurrentProfile();
+        set({ user, isAuthenticated: !!profile });
         set({ profile, isLoading: false });
       } else {
         set({
