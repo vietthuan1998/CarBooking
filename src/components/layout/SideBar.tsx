@@ -45,7 +45,6 @@ interface SidebarProps {
   onToggleCollapse: () => void;
 }
 
-<<<<<<< HEAD
 export default function Sidebar({
   isOpen,
   onClose,
@@ -53,10 +52,6 @@ export default function Sidebar({
   onToggleCollapse,
 }: SidebarProps) {
   const { profile } = useAuthStore();
-=======
-export default function Sidebar({ isOpen, onClose }: SidebarProps) {
-  const profile = useAuthStore((s) => s.profile);
->>>>>>> origin/main
   const navigate = useNavigate();
 
   const fullName = profile?.full_name || "Điều phối viên";
