@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import {
   getDashboardStats,
-  getPendingBookings,
+  getPendingBookings2,
   getRunningTrips,
   getUpcomingTrips,
 } from "../services/dashboardService";
@@ -33,16 +33,14 @@ export function useDashboard(selectedDate: Date) {
             getDashboardStats(selectedDate),
             getUpcomingTrips(selectedDate),
             getRunningTrips(selectedDate),
-            getPendingBookings(selectedDate),
+            getPendingBookings2(),
           ]);
 
         if (!isMounted) return;
-
         setStats(statsData);
         setUpcomingTrips(upcomingData);
         setRunningTrips(runningData);
         setPendingBookings(pendingData);
-     
       } catch (error) {
         console.error(error);
         if (isMounted) {

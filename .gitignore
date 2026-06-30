@@ -23,3 +23,12 @@ dist-ssr
 *.sln
 *.sw?
 .env
+
+# Database dumps / backups
+backup.sql
+data.sql
+
+# AI assistant local configs
+.continue/
+.agents/
+.claude/

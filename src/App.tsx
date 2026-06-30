@@ -3,16 +3,17 @@ import { Routes, Route, Navigate } from "react-router-dom";
 import { useAuthStore } from "@/stores/authStore";
 import LoginPage from "./pages/auth/LoginPage";
 import AdminLayout from "./app/layout";
-import {DashboardPage} from "./pages/admin/DashboardPage";
+import { DashboardPage } from "./pages/admin/DashboardPage";
 import DispatchPage from "./pages/admin/DispatchPage";
 import DriversPage from "./pages/admin/DriversPage";
 import VehiclesPage from "./pages/admin/VehiclesPage";
 import Signup from "./pages/Signup";
-// import ProtectedRoute from "./components/auth/ProtectedRoute";
+import ProtectedRoute from "./components/auth/ProtectedRoute";
 import NotFoundPage from "./pages/NotFoundPage";
 import BookingsPage from "./pages/booking/BookingsPage";
 
 import PublicRoute from "./components/auth/PublicRoute";
+import ReportsPage from "./pages/admin/ReportsPage";
 
 function AppContent() {
   return (
@@ -37,9 +38,9 @@ function AppContent() {
       <Route
         path="/"
         element={
-          // <ProtectedRoute>
+          <ProtectedRoute>
             <AdminLayout />
-          // </ProtectedRoute>
+          </ProtectedRoute>
         }
       >
         <Route index element={<Navigate to="/dashboard" replace />} />
@@ -48,6 +49,7 @@ function AppContent() {
         <Route path="vehicles" element={<VehiclesPage />} />
         <Route path="drivers" element={<DriversPage />} />
         <Route path="bookings" element={<BookingsPage />} />
+        <Route path="reports" element={<ReportsPage />} />
       </Route>
 
       {/* Catch all invalid routes */}
@@ -61,7 +63,6 @@ export default function App() {
   const initializeAuth = useAuthStore((s) => s.initializeAuth);
 
   useEffect(() => {
-    console.log("initializeAuth");
     initializeAuth();
   }, [initializeAuth]);
 
