@@ -1,11 +1,11 @@
 import { useState } from "react";
 import { SeatPicker } from "./SeatPicker";
 import { CustomerForm } from "./CustomerForm";
-import { formatTime, formatDate } from "./utils";
 import { INITIAL_FORM } from "./types";
 import type { BookingForm, Seat, Trip, TripSeat } from "./types";
 import { supabase } from "@/utils/supabase";
 import { BookingFormFields } from "./BookingForm";
+import { formatDate, formatTime } from "@/utils/helpers";
 
 interface Props {
   trip: Trip;

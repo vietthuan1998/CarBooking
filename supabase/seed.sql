@@ -1,119 +1,98 @@
-/**
- * Seed script for CarBooking app
- * This script populates initial data for the Huế - Đà Nẵng route
- * 
- * Usage: Run this in Supabase SQL editor or via API
- */
+-- ============================================================
+-- SEED: Routes, Vehicles, Seats, Trips cho hệ thống Huế <-> Đà Nẵng / Hội An
+-- Chạy file này trong Supabase SQL Editor
+-- ID do Supabase tự sinh, dùng DO block để lấy lại id sau khi insert
+-- ============================================================
 
--- Insert Routes
-INSERT INTO routes (origin, destination, distance_km, estimated_duration_hours)
-VALUES 
-  ('hue-da-nang', 'Huế', 'Đà Nẵng', 108, 2.5),
-  ('da-nang-hue', 'Đà Nẵng', 'Huế', 108, 2.5)
-ON CONFLICT (id) DO NOTHING;
+do $$
+declare
+  -- routes
+  r1 uuid; r2 uuid; r3 uuid; r4 uuid;
+  -- vehicles
+  v1 uuid; v2 uuid; v3 uuid; v4 uuid;
+  -- trips hôm nay
+  t1 uuid; t2 uuid; t3 uuid; t4 uuid;
+  -- trips ngày mai
+  t5 uuid; t6 uuid; t7 uuid; t8 uuid;
+  today date := current_date;
+begin
 
--- Insert Vehicles
-INSERT INTO vehicles (plate_number, seat_count, vehicle_type, status)
-VALUES 
-  ('BKS 01-001', 7, 'minivan', 'active'),
-  ('BKS 01-002', 7, 'minivan', 'active'),
-  ('BKS 01-003', 4, 'sedan', 'active'),
-  ('BKS 01-004', 4, 'sedan', 'active'),
-  ('BKS 01-005', 7, 'minivan', 'active')
-ON CONFLICT (id) DO NOTHING;
+  -- ── 1. ROUTES ─────────────────────────────────────────────
+  insert into public.routes (route_name, origin, destination, status) values
+    ('Huế → Đà Nẵng', 'Huế',     'Đà Nẵng', 'active'),
+    ('Huế → Hội An',  'Huế',     'Hội An',  'active'),
+    ('Đà Nẵng → Huế', 'Đà Nẵng', 'Huế',     'active'),
+    ('Hội An → Huế',  'Hội An',  'Huế',     'active')
+  on conflict do nothing;
 
--- Insert Seats for Vehicle 1 (7-seater)
-INSERT INTO seats (vehicle_seat_number, seat_type, is_disabled)
-VALUES 
-  ('vehicle-1', 1, 'normal', false),
-  ('vehicle-1', 2, 'normal', false),
-  ('vehicle-1', 3, 'normal', false),
-  ('vehicle-1', 4, 'normal', false),
-  ('vehicle-1', 5, 'normal', false),
-  ('vehicle-1', 6, 'normal', false),
-  ('vehicle-1', 7, 'normal', false)
-ON CONFLICT (id) DO NOTHING;
+  select id into r1 from public.routes where origin = 'Huế'     and destination = 'Đà Nẵng' limit 1;
+  select id into r2 from public.routes where origin = 'Huế'     and destination = 'Hội An'  limit 1;
+  select id into r3 from public.routes where origin = 'Đà Nẵng' and destination = 'Huế'     limit 1;
+  select id into r4 from public.routes where origin = 'Hội An'  and destination = 'Huế'     limit 1;
 
--- Insert Seats for Vehicle 2 (7-seater)
-INSERT INTO seats (vehicle_seat_number, seat_type, is_disabled)
-VALUES 
-  (≈'vehicle-2', 1, 'normal', false),
-  (≈'vehicle-2', 2, 'normal', false),
-  (≈'vehicle-2', 3, 'normal', false),
-  (≈'vehicle-2', 4, 'normal', false),
-  (≈'vehicle-2', 5, 'normal', false),
-  (≈'vehicle-2', 6, 'normal', false),
-  (≈'vehicle-2', 7, 'normal', false)
-ON CONFLICT (id) DO NOTHING;
+  -- ── 2. VEHICLES ───────────────────────────────────────────
+  insert into public.vehicles (plate_number, vehicle_name, seat_count, status) values
+    ('75A-12345', 'Ford Transit 7 chỗ',   7, 'active'),
+    ('75A-67890', 'Toyota Innova 4 chỗ',  4, 'active'),
+    ('43A-11111', 'Hyundai Starex 7 chỗ', 7, 'active'),
+    ('43A-22222', 'Toyota Vios 4 chỗ',    4, 'active')
+  on conflict (plate_number) do nothing;
 
--- Insert Seats for Vehicle 3 (4-seater)
-INSERT INTO seats (vehicle_seat_number, seat_type, is_disabled)
-VALUES 
-  ('vehicle-3', 1, 'normal', false),
-  ('vehicle-3', 2, 'normal', false),
-  ('vehicle-3', 3, 'normal', false),
-  ('vehicle-3', 4, 'normal', false)
-ON CONFLICT (id) DO NOTHING;
+  select id into v1 from public.vehicles where plate_number = '75A-12345';
+  select id into v2 from public.vehicles where plate_number = '75A-67890';
+  select id into v3 from public.vehicles where plate_number = '43A-11111';
+  select id into v4 from public.vehicles where plate_number = '43A-22222';
 
--- Insert Seats for Vehicle 4 (4-seater)
-INSERT INTO seats (vehicle_seat_number, seat_type, is_disabled)
-VALUES 
-  ('vehicle-4', 1, 'normal', false),
-  ('vehicle-4', 2, 'normal', false),
-  ('vehicle-4', 3, 'normal', false),
-  ('vehicle-4', 4, 'normal', false)
-ON CONFLICT (id) DO NOTHING;
+  -- ── 3. SEATS xe 7 chỗ (v1, v3) ───────────────────────────
+  -- seat_order 1 = tài xế, 2-7 = khách
+  insert into public.seats (vehicle_id, seat_code, seat_order) values
+    (v1, 'T',  1), (v1, 'A1', 2), (v1, 'A2', 3), (v1, 'A3', 4),
+    (v1, 'B1', 5), (v1, 'B2', 6), (v1, 'B3', 7),
+    (v3, 'T',  1), (v3, 'A1', 2), (v3, 'A2', 3), (v3, 'A3', 4),
+    (v3, 'B1', 5), (v3, 'B2', 6), (v3, 'B3', 7)
+  on conflict (vehicle_id, seat_code) do nothing;
 
--- Insert Seats for Vehicle 5 (7-seater)
-INSERT INTO seats (vehicle_seat_number, seat_type, is_disabled)
-VALUES 
-  ('vehicle-5', 1, 'normal', false),
-  ('vehicle-5', 2, 'normal', false),
-  ('vehicle-5', 3, 'normal', false),
-  ('vehicle-5', 4, 'normal', false),
-  ('vehicle-5', 5, 'normal', false),
-  ('vehicle-5', 6, 'normal', false),
-  ('vehicle-5', 7, 'normal', false)
-ON CONFLICT (id) DO NOTHING;
+  -- ── 4. SEATS xe 4 chỗ (v2, v4) ───────────────────────────
+  insert into public.seats (vehicle_id, seat_code, seat_order) values
+    (v2, 'T',  1), (v2, 'A1', 2), (v2, 'A2', 3), (v2, 'A3', 4),
+    (v4, 'T',  1), (v4, 'A1', 2), (v4, 'A2', 3), (v4, 'A3', 4)
+  on conflict (vehicle_id, seat_code) do nothing;
 
--- Insert Sample Trips for Huế -> Đà Nẵng (next 7 days)
--- Today
-INSERT INTO trips (vehicle_route_departure_time, arrival_time, fare_price, trip_status)
-VALUES 
-  ('vehicle-1', 'hue-da-nang', CURRENT_DATE + interval '6 hours', CURRENT_DATE + interval '8.5 hours', 150000, 'scheduled'),
-  ('vehicle-3', 'hue-da-nang', CURRENT_DATE + interval '8 hours', CURRENT_DATE + interval '10.5 hours', 150000, 'scheduled'),
-  ('vehicle-2', 'hue-da-nang', CURRENT_DATE + interval '10 hours', CURRENT_DATE + interval '12.5 hours', 150000, 'scheduled'),
-  ('vehicle-4', 'hue-da-nang', CURRENT_DATE + interval '12 hours', CURRENT_DATE + interval '14.5 hours', 150000, 'scheduled'),
-  ('vehicle-5', 'hue-da-nang', CURRENT_DATE + interval '14 hours', CURRENT_DATE + interval '16.5 hours', 150000, 'scheduled')
-ON CONFLICT (id) DO NOTHING;
+  -- ── 5. TRIPS hôm nay ──────────────────────────────────────
+  insert into public.trips (trip_code, route_id, vehicle_id, planned_departure_time, trip_status) values
+    ('HUE-DN-' || to_char(today, 'YYYYMMDD') || '-01', r1, v1, (today || ' 07:00:00')::timestamptz, 'scheduled'),
+    ('HUE-HA-' || to_char(today, 'YYYYMMDD') || '-01', r2, v2, (today || ' 08:00:00')::timestamptz, 'scheduled'),
+    ('DN-HUE-' || to_char(today, 'YYYYMMDD') || '-01', r3, v3, (today || ' 13:00:00')::timestamptz, 'scheduled'),
+    ('HA-HUE-' || to_char(today, 'YYYYMMDD') || '-01', r4, v4, (today || ' 14:00:00')::timestamptz, 'scheduled')
+  on conflict (trip_code) do nothing;
 
--- Tomorrow
-INSERT INTO trips (vehicle_route_departure_time, arrival_time, fare_price, trip_status)
-VALUES 
-  ('vehicle-1', 'hue-da-nang', CURRENT_DATE + interval '1 day' + interval '6 hours', CURRENT_DATE + interval '1 day' + interval '8.5 hours', 150000, 'scheduled'),
-  ('vehicle-3', 'hue-da-nang', CURRENT_DATE + interval '1 day' + interval '8 hours', CURRENT_DATE + interval '1 day' + interval '10.5 hours', 150000, 'scheduled'),
-  ('vehicle-2', 'hue-da-nang', CURRENT_DATE + interval '1 day' + interval '10 hours', CURRENT_DATE + interval '1 day' + interval '12.5 hours', 150000, 'scheduled'),
-  ('vehicle-4', 'hue-da-nang', CURRENT_DATE + interval '1 day' + interval '12 hours', CURRENT_DATE + interval '1 day' + interval '14.5 hours', 150000, 'scheduled'),
-  ('vehicle-5', 'hue-da-nang', CURRENT_DATE + interval '1 day' + interval '14 hours', CURRENT_DATE + interval '1 day' + interval '16.5 hours', 150000, 'scheduled')
-ON CONFLICT (id) DO NOTHING;
+  select id into t1 from public.trips where trip_code = 'HUE-DN-' || to_char(today, 'YYYYMMDD') || '-01';
+  select id into t2 from public.trips where trip_code = 'HUE-HA-' || to_char(today, 'YYYYMMDD') || '-01';
+  select id into t3 from public.trips where trip_code = 'DN-HUE-' || to_char(today, 'YYYYMMDD') || '-01';
+  select id into t4 from public.trips where trip_code = 'HA-HUE-' || to_char(today, 'YYYYMMDD') || '-01';
 
--- Insert Sample Trips for Đà Nẵng -> Huế (next 7 days)
--- Today
-INSERT INTO trips (vehicle_route_departure_time, arrival_time, fare_price, trip_status)
-VALUES 
-  ('vehicle-1', 'da-nang-hue', CURRENT_DATE + interval '7 hours', CURRENT_DATE + interval '9.5 hours', 150000, 'scheduled'),
-  ('vehicle-3', 'da-nang-hue', CURRENT_DATE + interval '9 hours', CURRENT_DATE + interval '11.5 hours', 150000, 'scheduled'),
-  ('vehicle-2', 'da-nang-hue', CURRENT_DATE + interval '11 hours', CURRENT_DATE + interval '13.5 hours', 150000, 'scheduled'),
-  ('vehicle-4', 'da-nang-hue', CURRENT_DATE + interval '13 hours', CURRENT_DATE + interval '15.5 hours', 150000, 'scheduled'),
-  ('vehicle-5', 'da-nang-hue', CURRENT_DATE + interval '15 hours', CURRENT_DATE + interval '17.5 hours', 150000, 'scheduled')
-ON CONFLICT (id) DO NOTHING;
+  -- ── 6. TRIPS ngày mai ─────────────────────────────────────
+  insert into public.trips (trip_code, route_id, vehicle_id, planned_departure_time, trip_status) values
+    ('HUE-DN-' || to_char(today+1, 'YYYYMMDD') || '-01', r1, v1, ((today+1) || ' 07:00:00')::timestamptz, 'scheduled'),
+    ('HUE-HA-' || to_char(today+1, 'YYYYMMDD') || '-01', r2, v2, ((today+1) || ' 08:00:00')::timestamptz, 'scheduled'),
+    ('DN-HUE-' || to_char(today+1, 'YYYYMMDD') || '-01', r3, v3, ((today+1) || ' 13:00:00')::timestamptz, 'scheduled'),
+    ('HA-HUE-' || to_char(today+1, 'YYYYMMDD') || '-01', r4, v4, ((today+1) || ' 14:00:00')::timestamptz, 'scheduled')
+  on conflict (trip_code) do nothing;
 
--- Tomorrow
-INSERT INTO trips (vehicle_route_departure_time, arrival_time, fare_price, trip_status)
-VALUES 
-  ('vehicle-1', 'da-nang-hue', CURRENT_DATE + interval '1 day' + interval '7 hours', CURRENT_DATE + interval '1 day' + interval '9.5 hours', 150000, 'scheduled'),
-  ('vehicle-3', 'da-nang-hue', CURRENT_DATE + interval '1 day' + interval '9 hours', CURRENT_DATE + interval '1 day' + interval '11.5 hours', 150000, 'scheduled'),
-  ('vehicle-2', 'da-nang-hue', CURRENT_DATE + interval '1 day' + interval '11 hours', CURRENT_DATE + interval '1 day' + interval '13.5 hours', 150000, 'scheduled'),
-  ('vehicle-4', 'da-nang-hue', CURRENT_DATE + interval '1 day' + interval '13 hours', CURRENT_DATE + interval '1 day' + interval '15.5 hours', 150000, 'scheduled'),
-  ('vehicle-5', 'da-nang-hue', CURRENT_DATE + interval '1 day' + interval '15 hours', CURRENT_DATE + interval '1 day' + interval '17.5 hours', 150000, 'scheduled')
-ON CONFLICT (id) DO NOTHING;
+  select id into t5 from public.trips where trip_code = 'HUE-DN-' || to_char(today+1, 'YYYYMMDD') || '-01';
+  select id into t6 from public.trips where trip_code = 'HUE-HA-' || to_char(today+1, 'YYYYMMDD') || '-01';
+  select id into t7 from public.trips where trip_code = 'DN-HUE-' || to_char(today+1, 'YYYYMMDD') || '-01';
+  select id into t8 from public.trips where trip_code = 'HA-HUE-' || to_char(today+1, 'YYYYMMDD') || '-01';
+
+  -- ── 7. TRIP_SEATS: ghế cho tất cả trips ──────────────────
+  insert into public.trip_seats (trip_id, seat_id, status)
+  select trips.trip_id, s.id, 'available'
+  from (
+    values
+      (t1, v1), (t2, v2), (t3, v3), (t4, v4),
+      (t5, v1), (t6, v2), (t7, v3), (t8, v4)
+  ) as trips(trip_id, vehicle_id)
+  join public.seats s on s.vehicle_id = trips.vehicle_id
+  on conflict (trip_id, seat_id) do nothing;
+
+end $$;

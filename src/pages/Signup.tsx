@@ -32,7 +32,7 @@ export default function Signup() {
         alert("Đăng ký thành công. Vui lòng kiểm tra email để xác thực.");
         navigate("/login", { replace: true });
       }
-    } catch (err) {
+    } catch {
       alert("Lỗi hệ thống.");
     } finally {
       setLoading(false);

@@ -3,8 +3,8 @@ import { supabase } from "@/utils/supabase";
 import { SeatPicker } from "./SeatPicker";
 import { CustomerForm } from "./CustomerForm";
 import { BookingFormFields } from "./BookingForm";
-import { formatTime, formatDate } from "./utils";
 import type { BookingForm, Seat, Trip, TripSeat } from "./types";
+import { formatDate, formatTime } from "@/utils/helpers";
 
 interface Props {
   trip: Trip;
@@ -34,7 +34,6 @@ export function TripCard({
   const [submitting, setSubmitting] = useState(false);
 
   const isActive = activeFormTripId === trip.id;
-
   // Eager-load seats on mount
   useEffect(() => {
     let cancelled = false;

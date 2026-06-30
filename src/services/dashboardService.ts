@@ -1,10 +1,10 @@
-import {supabase} from "../utils/supabase";
+import { supabase } from "../utils/supabase";
 
 import type {
-    DashboardStats,
-    RunningTrip,
-    // PendingBooking,
-    UpcomingTrip, 
+  DashboardStats,
+  RunningTrip,
+  // PendingBooking,
+  UpcomingTrip,
 } from "../features/dashboard/types";
 function getDayRange(date: Date) {
   const start = new Date(date);
@@ -51,24 +51,29 @@ export async function getDashboardStats(date: Date): Promise<DashboardStats> {
 
     supabase
       .from("bookings")
-      .select(`
+      .select(
+        `
         seat_count,
         trip:trips!inner (
           planned_departure_time
         )
-      `)
+      `,
+      )
       .neq("status", "cancelled")
       .gte("trips.planned_departure_time", startISO)
       .lte("trips.planned_departure_time", endISO),
 
     supabase
       .from("bookings")
-      .select(`
+      .select(
+        `
         id,
         trip:trips!inner (
           planned_departure_time
         )
-      `, { count: "exact", head: true })
+      `,
+        { count: "exact", head: true },
+      )
       .eq("status", "pending")
       .gte("trips.planned_departure_time", startISO)
       .lte("trips.planned_departure_time", endISO),
@@ -80,10 +85,9 @@ export async function getDashboardStats(date: Date): Promise<DashboardStats> {
   if (bookingsTodayResult.error) throw bookingsTodayResult.error;
   if (pendingBookingsResult.error) throw pendingBookingsResult.error;
 
-  const totalCustomers =
-    bookingsTodayResult.data?.reduce((sum, booking) => {
-      return sum + Number(booking.seat_count || 0);
-    }, 0) ?? 0;
+  const totalCustomers = bookingsTodayResult.data?.reduce((sum, booking) => {
+    return sum + Number(booking.seat_count || 0);
+  }, 0) ?? 0;
 
   return {
     totalTrips: totalTripsResult.count ?? 0,
@@ -99,7 +103,8 @@ export async function getUpcomingTrips(date: Date): Promise<UpcomingTrip[]> {
 
   const { data, error } = await supabase
     .from("trips")
-    .select(`
+    .select(
+      `
       id,
       trip_code,
       planned_departure_time,
@@ -115,7 +120,8 @@ export async function getUpcomingTrips(date: Date): Promise<UpcomingTrip[]> {
       trip_seats (
         status
       )
-    `)
+    `,
+    )
     .in("trip_status", ["scheduled", "waiting"])
     .gte("planned_departure_time", startISO)
     .lte("planned_departure_time", endISO)
@@ -132,7 +138,8 @@ export async function getRunningTrips(date: Date): Promise<RunningTrip[]> {
 
   const { data, error } = await supabase
     .from("trips")
-    .select(`
+    .select(
+      `
       id,
       trip_code,
       planned_departure_time,
@@ -151,7 +158,8 @@ export async function getRunningTrips(date: Date): Promise<RunningTrip[]> {
         full_name,
         phone
       )
-    `)
+    `,
+    )
     .eq("trip_status", "running")
     .gte("planned_departure_time", startISO)
     .lte("planned_departure_time", endISO)
@@ -163,10 +171,27 @@ export async function getRunningTrips(date: Date): Promise<RunningTrip[]> {
   return data as unknown as RunningTrip[];
 }
 
+export async function getPendingBookings2() {
+  try {
+    const { data, error } = await supabase.functions.invoke(
+      "getPendingBookings",
+      {
+        body: { name: "Functions" },
+      },
+    );
+    if (error) throw error;
+    return data;
+  } catch (error) {
+    console.error("Error fetching pending bookings:", error);
+    throw error;
+  }
+}
+
 export async function getPendingBookings() {
   const { data, error } = await supabase
     .from("bookings")
-    .select(`
+    .select(
+      `
       id,
       booking_code,
       seat_count,
@@ -193,13 +218,10 @@ export async function getPendingBookings() {
           destination
         )
       )
-    `)
+    `,
+    )
     .in("status", ["pending", "NEW"])
     .limit(10);
-
-  // console.log("PENDING BOOKINGS DATA:", data);
-  // console.log("PENDING BOOKINGS ERROR:", error);
-  // console.table(data);
 
   if (error) throw error;
 

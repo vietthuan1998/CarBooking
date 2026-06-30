@@ -34,7 +34,7 @@ const menuItems: MenuItem[] = [
   { name: "Quản lý chuyến", path: "/trips", icon: Route },
   { name: "Khách hàng", path: "/customers", icon: Users },
   { name: "Đăng ký", path: "/signup", icon: UserPlus },
-  { name: "Báo cáo", path: "/reports", icon: Map },
+  { name: "Báo cáo", path: "/ ", icon: Map },
   { name: "Cài đặt", path: "/settings", icon: Settings },
 ];
 
@@ -85,7 +85,9 @@ export default function Sidebar({
         <div
           className={[
             "flex items-center border-b border-white/10",
-            isCollapsed ? "justify-center px-3 py-5" : "justify-between px-5 py-5",
+            isCollapsed
+              ? "justify-center px-3 py-5"
+              : "justify-between px-5 py-5",
           ].join(" ")}
         >
           <div className="flex min-w-0 items-center gap-3">
@@ -123,7 +125,11 @@ export default function Sidebar({
             className="absolute -right-3 top-7 hidden h-7 w-7 items-center justify-center rounded-full border border-white/10 bg-[#0B252C] text-white shadow-lg transition hover:bg-emerald-500 lg:flex"
             title={isCollapsed ? "Mở rộng sidebar" : "Thu gọn sidebar"}
           >
-            {isCollapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
+            {isCollapsed ? (
+              <ChevronRight size={16} />
+            ) : (
+              <ChevronLeft size={16} />
+            )}
           </button>
         </div>
 
@@ -147,7 +153,9 @@ export default function Sidebar({
                   className={({ isActive }) =>
                     [
                       "group relative flex items-center rounded-2xl text-sm font-semibold transition-all duration-200",
-                      isCollapsed ? "justify-center px-2 py-3" : "gap-3 px-4 py-3",
+                      isCollapsed
+                        ? "justify-center px-2 py-3"
+                        : "gap-3 px-4 py-3",
                       isActive
                         ? "bg-emerald-500 text-white shadow-lg shadow-emerald-500/25"
                         : "text-slate-300 hover:bg-white/10 hover:text-white",
@@ -173,7 +181,9 @@ export default function Sidebar({
 
                       {!isCollapsed && (
                         <>
-                          <span className="flex-1 whitespace-nowrap">{item.name}</span>
+                          <span className="flex-1 whitespace-nowrap">
+                            {item.name}
+                          </span>
                           <ChevronRight
                             size={16}
                             className={[
