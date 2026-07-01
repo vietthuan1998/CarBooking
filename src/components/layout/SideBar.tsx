@@ -34,7 +34,7 @@ const menuItems: MenuItem[] = [
   { name: "Quản lý chuyến", path: "/trips", icon: Route },
   { name: "Khách hàng", path: "/customers", icon: Users },
   { name: "Đăng ký", path: "/signup", icon: UserPlus },
-  { name: "Báo cáo", path: "/ ", icon: Map },
+  { name: "Báo cáo", path: "/reports", icon: Map },
   { name: "Cài đặt", path: "/settings", icon: Settings },
 ];
 
