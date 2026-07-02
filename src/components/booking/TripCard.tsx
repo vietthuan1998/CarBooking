@@ -1,10 +1,12 @@
 import { useEffect, useState } from "react";
-import { supabase } from "@/utils/supabase";
 import { SeatPicker } from "./SeatPicker";
 import { CustomerForm } from "./CustomerForm";
 import { BookingFormFields } from "./BookingForm";
 import type { BookingForm, Seat, Trip, TripSeat } from "./types";
 import { formatDate, formatTime } from "@/utils/helpers";
+import { edgeFunctionClient } from "@/utils/axiosClient";
+import axios from "axios";
+import { getTripSeatsWithBookings } from "@/services/bookingService";
 
 interface Props {
   trip: Trip;
@@ -34,34 +36,37 @@ export function TripCard({
   const [submitting, setSubmitting] = useState(false);
 
   const isActive = activeFormTripId === trip.id;
-  // Eager-load seats on mount
+
+  const loadSeats = async () => {
+    const rows = await getTripSeatsWithBookings(trip.id);
+    setTripSeats(rows as unknown as TripSeat[]);
+    // Derive vehicle seats from joined trip_seats data (trigger đảm bảo đủ ghế)
+    const vSeats: Seat[] = rows
+      .filter((r) => r.seat !== null)
+      .map((r) => ({
+        id: r.seat_id,
+        seat_code: r.seat!.seat_code,
+        seat_order: r.seat!.seat_order,
+      }))
+      .sort((a, b) => a.seat_order - b.seat_order);
+    setVehicleSeats(vSeats);
+  };
+
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      const [tripSeatsRes, vehicleSeatsRes] = await Promise.all([
-        supabase
-          .from("trip_seats")
-          .select(
-            "id, seat_id, status, booking_id, seat:seats(id, seat_code, seat_order)",
-          )
-          .eq("trip_id", trip.id),
-        supabase
-          .from("seats")
-          .select("id, seat_code, seat_order")
-          .eq("vehicle_id", trip.vehicle.id)
-          .order("seat_order"),
-      ]);
-      if (cancelled) return;
-      if (!tripSeatsRes.error && !vehicleSeatsRes.error) {
-        setTripSeats((tripSeatsRes.data ?? []) as unknown as TripSeat[]);
-        setVehicleSeats((vehicleSeatsRes.data ?? []) as Seat[]);
+      try {
+        await loadSeats();
+      } catch {
+        // lỗi load ghế — giữ nguyên state rỗng
+      } finally {
+        if (!cancelled) setSeatsLoading(false);
       }
-      setSeatsLoading(false);
     })();
     return () => {
       cancelled = true;
     };
-  }, [trip.id, trip.vehicle.id]);
+  }, [trip.id]);
 
   const orderToSeatId = Object.fromEntries(
     vehicleSeats.map((s) => [s.seat_order, s.id]),
@@ -116,59 +121,36 @@ export function TripCard({
 
     setSubmitting(true);
     const selectedSeatIds = selectedSeatOrders
-      .map((o) => orderToSeatId[o])
+      .map((o) => {
+        console.log("--------", o, orderToSeatId[o]);
+        return orderToSeatId[o];
+      })
       .filter(Boolean);
-
+    console.log("======", orderToSeatId);
     try {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-      const res = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-booking`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${
-              session?.access_token ?? import.meta.env.VITE_SUPABASE_ANON_KEY
-            }`,
-            apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
-          },
-          body: JSON.stringify({
-            customer_id: form.isNewCustomer ? undefined : form.customer_id,
-            customer_name: form.isNewCustomer ? form.customer_name : undefined,
-            customer_phone: form.isNewCustomer
-              ? form.customer_phone
-              : undefined,
-            customer_note: form.isNewCustomer
-              ? form.customer_note || undefined
-              : undefined,
-            trip_id: trip.id,
-            seat_ids: selectedSeatIds,
-            pickup_address: form.pickup_address,
-            dropoff_address: form.dropoff_address,
-            fare_amount: Number(form.fare_amount),
-          }),
-        },
-      );
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error ?? "Có lỗi xảy ra");
+      await edgeFunctionClient.post("/create-booking", {
+        customer_id: form.isNewCustomer ? undefined : form.customer_id,
+        customer_name: form.isNewCustomer ? form.customer_name : undefined,
+        customer_phone: form.isNewCustomer ? form.customer_phone : undefined,
+        customer_note: form.isNewCustomer
+          ? form.customer_note || undefined
+          : undefined,
+        trip_id: trip.id,
+        seat_ids: selectedSeatIds,
+        pickup_address: form.pickup_address,
+        dropoff_address: form.dropoff_address,
+        fare_amount: Number(form.fare_amount),
+      });
 
-      // Refresh trip_seats after booking
-      const refreshed = await supabase
-        .from("trip_seats")
-        .select(
-          "id, seat_id, status, booking_id, seat:seats(id, seat_code, seat_order)",
-        )
-        .eq("trip_id", trip.id);
-      if (!refreshed.error) {
-        setTripSeats((refreshed.data ?? []) as unknown as TripSeat[]);
-      }
-
+      await loadSeats();
       handleReset();
-      onSuccess("Đặt vé thành công! 🎉");
+      onSuccess("Đặt vé thành công!");
     } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : "Có lỗi xảy ra";
+      const msg = axios.isAxiosError(e)
+        ? e.response?.data?.error ?? e.message
+        : e instanceof Error
+        ? e.message
+        : "Có lỗi xảy ra";
       setFormError(msg);
       onError(msg);
     } finally {

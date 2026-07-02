@@ -1,4 +1,3 @@
-// src/lib/axiosClient.ts
 import axios, { type AxiosInstance } from "axios";
 import { supabase } from "./supabase";
 

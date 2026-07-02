@@ -14,9 +14,12 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
+    // Dùng JWT của user để RLS policy áp dụng (admin/manager mới đọc được bookings)
+    const authHeader = req.headers.get("Authorization") ?? "";
     const supabase = createClient(
-      Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_ANON_KEY")!,
+      { global: { headers: { Authorization: authHeader } } },
     );
 
     const today = new Date();
@@ -29,7 +32,6 @@ Deno.serve(async (req: Request) => {
         `
     id,
     booking_code,
-    seat_count,
     pickup_address,
     dropoff_address,
     fare_amount,
@@ -55,7 +57,7 @@ Deno.serve(async (req: Request) => {
     )
   `,
       )
-      .in("status", ["pending", "NEW"])
+      .in("status", ["pending"])
       .gte("trip.planned_departure_time", todayISO)
       .limit(10);
 

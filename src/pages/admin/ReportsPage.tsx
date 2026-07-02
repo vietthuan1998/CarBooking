@@ -1,5 +1,11 @@
-import { useCallback, useEffect, useState } from "react";
-import { BarChart3, Car, DollarSign, TicketCheck, TrendingUp } from "lucide-react";
+import { useCallback, useEffect, useTransition, useState } from "react";
+import {
+  BarChart3,
+  Car,
+  DollarSign,
+  TicketCheck,
+  TrendingUp,
+} from "lucide-react";
 import {
   type ReportOverview,
   type VehiclePerformance,
@@ -53,10 +59,18 @@ interface SummaryCardProps {
 }
 
 const colorMap = {
-  emerald: { bg: "bg-emerald-50", text: "text-emerald-600", val: "text-emerald-700" },
-  blue:    { bg: "bg-blue-50",    text: "text-blue-600",    val: "text-blue-700"    },
-  violet:  { bg: "bg-violet-50",  text: "text-violet-600",  val: "text-violet-700"  },
-  amber:   { bg: "bg-amber-50",   text: "text-amber-600",   val: "text-amber-700"   },
+  emerald: {
+    bg: "bg-emerald-50",
+    text: "text-emerald-600",
+    val: "text-emerald-700",
+  },
+  blue: { bg: "bg-blue-50", text: "text-blue-600", val: "text-blue-700" },
+  violet: {
+    bg: "bg-violet-50",
+    text: "text-violet-600",
+    val: "text-violet-700",
+  },
+  amber: { bg: "bg-amber-50", text: "text-amber-600", val: "text-amber-700" },
 };
 
 function SummaryCard({ title, value, sub, icon, color }: SummaryCardProps) {
@@ -65,11 +79,15 @@ function SummaryCard({ title, value, sub, icon, color }: SummaryCardProps) {
     <article className="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm">
       <div className="flex items-start justify-between gap-4">
         <span className="text-sm font-medium text-slate-500">{title}</span>
-        <span className={`flex h-9 w-9 items-center justify-center rounded-xl ${c.bg} ${c.text}`}>
+        <span
+          className={`flex h-9 w-9 items-center justify-center rounded-xl ${c.bg} ${c.text}`}
+        >
           {icon}
         </span>
       </div>
-      <div className={`mt-4 text-2xl font-bold leading-none ${c.val}`}>{value}</div>
+      <div className={`mt-4 text-2xl font-bold leading-none ${c.val}`}>
+        {value}
+      </div>
       {sub && <p className="mt-2 text-xs text-slate-400">{sub}</p>}
     </article>
   );
@@ -81,31 +99,29 @@ export default function ReportsPage() {
     getPresetDates("this_month"),
   );
 
+  const [isPending, startTransition] = useTransition();
   const [overview, setOverview] = useState<ReportOverview | null>(null);
   const [performance, setPerformance] = useState<VehiclePerformance[]>([]);
-  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const [ov, perf] = await Promise.all([
-        getReportOverview(startDate, endDate),
-        getVehiclePerformance(startDate, endDate),
-      ]);
-      setOverview(ov);
-      setPerformance(perf);
-    } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "Không thể tải báo cáo");
-    } finally {
-      setLoading(false);
-    }
+  const load = useCallback(() => {
+    startTransition(async () => {
+      setError(null);
+      try {
+        const [ov, perf] = await Promise.all([
+          getReportOverview(startDate, endDate),
+          getVehiclePerformance(startDate, endDate),
+        ]);
+        setOverview(ov);
+        setPerformance(perf);
+      } catch (e: unknown) {
+        setError(e instanceof Error ? e.message : "Không thể tải báo cáo");
+      }
+    });
   }, [startDate, endDate]);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    void load();
+    load();
   }, [load]);
 
   const applyPreset = (key: PresetKey) => {
@@ -134,7 +150,9 @@ export default function ReportsPage() {
             <h1 className="text-2xl font-semibold tracking-tight text-slate-900">
               Báo cáo & Thống kê
             </h1>
-            <p className="text-sm text-slate-500">Hiệu suất vận hành và doanh thu</p>
+            <p className="text-sm text-slate-500">
+              Hiệu suất vận hành và doanh thu
+            </p>
           </div>
         </div>
         <button
@@ -188,12 +206,14 @@ export default function ReportsPage() {
         </div>
       </div>
 
-      {loading ? (
+      {isPending ? (
         <div className="flex items-center justify-center py-24">
           <div className="h-8 w-8 animate-spin rounded-full border-2 border-blue-500 border-t-transparent" />
         </div>
       ) : error ? (
-        <div className="rounded-2xl bg-red-50 p-8 text-center text-sm text-red-600">{error}</div>
+        <div className="rounded-2xl bg-red-50 p-8 text-center text-sm text-red-600">
+          {error}
+        </div>
       ) : (
         <>
           {/* Summary cards */}
@@ -231,7 +251,9 @@ export default function ReportsPage() {
           {/* Vehicle performance */}
           <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">
             <div className="border-b border-slate-100 px-6 py-4">
-              <h2 className="text-base font-semibold text-slate-900">Hiệu suất theo xe</h2>
+              <h2 className="text-base font-semibold text-slate-900">
+                Hiệu suất theo xe
+              </h2>
               <p className="mt-0.5 text-xs text-slate-400">
                 Tỷ lệ lấp đầy tính trên chuyến đã hoàn thành
               </p>
@@ -246,11 +268,21 @@ export default function ReportsPage() {
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b border-slate-100 bg-slate-50/60">
-                      <th className="px-5 py-3 text-left font-medium text-slate-500">Xe</th>
-                      <th className="px-4 py-3 text-center font-medium text-slate-500">Chuyến</th>
-                      <th className="px-4 py-3 text-center font-medium text-slate-500">Hoàn thành</th>
-                      <th className="px-4 py-3 text-center font-medium text-slate-500">Booking</th>
-                      <th className="px-4 py-3 text-right font-medium text-slate-500">Doanh thu</th>
+                      <th className="px-5 py-3 text-left font-medium text-slate-500">
+                        Xe
+                      </th>
+                      <th className="px-4 py-3 text-center font-medium text-slate-500">
+                        Chuyến
+                      </th>
+                      <th className="px-4 py-3 text-center font-medium text-slate-500">
+                        Hoàn thành
+                      </th>
+                      <th className="px-4 py-3 text-center font-medium text-slate-500">
+                        Booking
+                      </th>
+                      <th className="px-4 py-3 text-right font-medium text-slate-500">
+                        Doanh thu
+                      </th>
                       <th className="px-5 py-3 text-left font-medium text-slate-500 w-48">
                         Lấp đầy
                       </th>
@@ -263,10 +295,17 @@ export default function ReportsPage() {
                           ? Math.round((p.total_revenue / maxRevenue) * 100)
                           : 0;
                       return (
-                        <tr key={p.id} className="transition-colors hover:bg-slate-50/50">
+                        <tr
+                          key={p.id}
+                          className="transition-colors hover:bg-slate-50/50"
+                        >
                           <td className="px-5 py-4">
-                            <div className="font-medium text-slate-900">{p.vehicle_name}</div>
-                            <div className="font-mono text-xs text-slate-400">{p.plate_number}</div>
+                            <div className="font-medium text-slate-900">
+                              {p.vehicle_name}
+                            </div>
+                            <div className="font-mono text-xs text-slate-400">
+                              {p.plate_number}
+                            </div>
                           </td>
                           <td className="px-4 py-4 text-center text-slate-700">
                             {p.total_trips}
@@ -314,7 +353,9 @@ export default function ReportsPage() {
                         {performance.reduce((s, p) => s + p.total_bookings, 0)}
                       </td>
                       <td className="px-4 py-3 text-right text-sm font-semibold text-slate-900">
-                        {fCurrency(performance.reduce((s, p) => s + p.total_revenue, 0))}
+                        {fCurrency(
+                          performance.reduce((s, p) => s + p.total_revenue, 0),
+                        )}
                       </td>
                       <td className="px-5 py-3" />
                     </tr>

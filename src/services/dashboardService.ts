@@ -38,14 +38,14 @@ export async function getDashboardStats(date: Date): Promise<DashboardStats> {
     supabase
       .from("trips")
       .select("id", { count: "exact", head: true })
-      .eq("trip_status", "running")
+      .eq("trip_status", "in_progress")
       .gte("planned_departure_time", startISO)
       .lte("planned_departure_time", endISO),
 
     supabase
       .from("trips")
       .select("id", { count: "exact", head: true })
-      .in("trip_status", ["scheduled", "waiting"])
+      .in("trip_status", ["scheduled"])
       .gte("planned_departure_time", startISO)
       .lte("planned_departure_time", endISO),
 
@@ -53,7 +53,7 @@ export async function getDashboardStats(date: Date): Promise<DashboardStats> {
       .from("bookings")
       .select(
         `
-        seat_count,
+        id,
         trip:trips!inner (
           planned_departure_time
         )
@@ -85,9 +85,7 @@ export async function getDashboardStats(date: Date): Promise<DashboardStats> {
   if (bookingsTodayResult.error) throw bookingsTodayResult.error;
   if (pendingBookingsResult.error) throw pendingBookingsResult.error;
 
-  const totalCustomers = bookingsTodayResult.data?.reduce((sum, booking) => {
-    return sum + Number(booking.seat_count || 0);
-  }, 0) ?? 0;
+  const totalCustomers = bookingsTodayResult.data?.length ?? 0;
 
   return {
     totalTrips: totalTripsResult.count ?? 0,
@@ -122,7 +120,7 @@ export async function getUpcomingTrips(date: Date): Promise<UpcomingTrip[]> {
       )
     `,
     )
-    .in("trip_status", ["scheduled", "waiting"])
+    .in("trip_status", ["scheduled"])
     .gte("planned_departure_time", startISO)
     .lte("planned_departure_time", endISO)
     .order("planned_departure_time", { ascending: true })
@@ -160,7 +158,7 @@ export async function getRunningTrips(date: Date): Promise<RunningTrip[]> {
       )
     `,
     )
-    .eq("trip_status", "running")
+    .eq("trip_status", "in_progress")
     .gte("planned_departure_time", startISO)
     .lte("planned_departure_time", endISO)
     .order("planned_departure_time", { ascending: true })
@@ -194,7 +192,6 @@ export async function getPendingBookings() {
       `
       id,
       booking_code,
-      seat_count,
       pickup_address,
       dropoff_address,
       fare_amount,
@@ -220,7 +217,7 @@ export async function getPendingBookings() {
       )
     `,
     )
-    .in("status", ["pending", "NEW"])
+    .in("status", ["pending"])
     .limit(10);
 
   if (error) throw error;

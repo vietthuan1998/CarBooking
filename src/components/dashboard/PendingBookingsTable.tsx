@@ -37,9 +37,6 @@ export function PendingBookingsTable({ bookings }: Props) {
                 Ngày đi
               </th>
               <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-slate-500">
-                Số ghế
-              </th>
-              <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-slate-500">
                 Trạng thái
               </th>
             </tr>
@@ -48,7 +45,7 @@ export function PendingBookingsTable({ bookings }: Props) {
             {bookings.length === 0 ? (
               <tr>
                 <td
-                  colSpan={7}
+                  colSpan={6}
                   className="px-4 py-8 text-center text-sm font-medium text-slate-500"
                 >
                   Chưa có booking nào
@@ -73,12 +70,9 @@ export function PendingBookingsTable({ bookings }: Props) {
                   <td className="whitespace-nowrap px-4 py-4 text-sm text-slate-600">
                     {formatDateTime(booking.trip?.planned_departure_time)}
                   </td>
-                  <td className="whitespace-nowrap px-4 py-4 text-sm text-slate-600">
-                    {booking.seat_count}
-                  </td>
                   <td className="whitespace-nowrap px-4 py-4">
                     <span className="inline-flex rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-amber-700">
-                      NEW
+                      {booking.status}
                     </span>
                   </td>
                 </tr>

@@ -182,8 +182,8 @@ export interface Profile {
   id: string;
   full_name: string;
   phone: string | null;
-  role: "admin" | "dispatcher" | "driver" | "customer";
-  status: "active" | "inactive" | "blocked";
+  role: "admin" | "staff" | "driver";
+  status: "active" | "inactive";
   created_at: string;
 }
 export async function getCurrentProfile(): Promise<Profile | null> {

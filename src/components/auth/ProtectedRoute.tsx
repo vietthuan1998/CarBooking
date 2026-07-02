@@ -29,7 +29,7 @@ export default function ProtectedRoute({ children }: ProtectedRouteProps) {
     return <Navigate to="/login" replace />;
   }
 
-  if (profile.role !== "admin" && profile.role !== "dispatcher") {
+  if (profile.role !== "admin" && profile.role !== "staff") {
     return <Navigate to="/login" replace />;
   }
 

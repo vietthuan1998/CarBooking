@@ -50,7 +50,6 @@ export type RunningTrip = {
 export type PendingBooking = {
   id: string;
   booking_code: string;
-  seat_count: number;
   pickup_address: string;
   dropoff_address: string;
   fare_amount: number;
