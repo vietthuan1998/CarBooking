@@ -92,15 +92,27 @@ export async function getVehiclePerformance(
   const trips = tripsRes.data ?? [];
   const tripIds = trips.map((t) => t.id);
 
-  let bookings: Array<{ trip_id: string; fare_amount: number | null; seat_count: number | null }> = [];
+  let bookings: Array<{ trip_id: string; fare_amount: number | null }> = [];
+  let tripSeatCounts: Record<string, number> = {};
   if (tripIds.length > 0) {
-    const { data, error } = await supabase
-      .from("bookings")
-      .select("trip_id, fare_amount, seat_count")
-      .in("trip_id", tripIds)
-      .neq("status", "cancelled");
-    if (error) throw error;
-    bookings = data ?? [];
+    const [bookingsRes, tripSeatsRes] = await Promise.all([
+      supabase
+        .from("bookings")
+        .select("trip_id, fare_amount")
+        .in("trip_id", tripIds)
+        .neq("status", "cancelled"),
+      supabase
+        .from("trip_seats")
+        .select("trip_id")
+        .in("trip_id", tripIds)
+        .eq("status", "booked"),
+    ]);
+    if (bookingsRes.error) throw bookingsRes.error;
+    if (tripSeatsRes.error) throw tripSeatsRes.error;
+    bookings = bookingsRes.data ?? [];
+    (tripSeatsRes.data ?? []).forEach((ts) => {
+      tripSeatCounts[ts.trip_id] = (tripSeatCounts[ts.trip_id] ?? 0) + 1;
+    });
   }
 
   // Build lookup maps
@@ -128,8 +140,8 @@ export async function getVehiclePerformance(
       (bookingsByTrip[t.id] ?? []).forEach((b) => {
         totalRevenue += Number(b.fare_amount ?? 0);
         totalBookings += 1;
-        totalBookedSeats += Number(b.seat_count ?? 1);
       });
+      totalBookedSeats += tripSeatCounts[t.id] ?? 0;
     });
 
     const passengerSeats = v.seat_count - 1; // trừ ghế tài xế

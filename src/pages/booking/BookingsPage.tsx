@@ -9,12 +9,12 @@ import type { BookingForm, Trip } from "../../components/booking/types";
 
 type Direction = "hue_to_dest" | "dest_to_hue";
 
-type TripStatus = "all" | "scheduled" | "running" | "completed" | "cancelled";
+type TripStatus = "all" | "scheduled" | "in_progress" | "completed" | "cancelled";
 
 const STATUS_LABELS: Record<TripStatus, string> = {
   all: "Tất cả",
   scheduled: "Chờ xuất phát",
-  running: "Đang chạy",
+  in_progress: "Đang chạy",
   completed: "Hoàn thành",
   cancelled: "Đã hủy",
 };

@@ -1,17 +1,23 @@
 // src/features/dispatch/useDispatchData.js
 import { supabase } from "@/utils/supabase";
-import { useCallback, useEffect, useState } from "react";
-import type { CreateTripInput, Driver, Route, Trip, TripStatus, Vehicle } from "./types";
-
-const EDGE_FUNCTION_URL =
-  `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/schedule-trip`;
+import { useCallback, useEffect, useTransition, useState } from "react";
+import type {
+  CreateTripInput,
+  Driver,
+  Route,
+  Trip,
+  TripStatus,
+  Vehicle,
+} from "./types";
+import { edgeFunctionClient } from "@/utils/axiosClient";
+import axios from "axios";
 
 export function useDispatchData(selectedDate: string) {
   const [routes, setRoutes] = useState<Route[]>([]);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [drivers, setDrivers] = useState<Driver[]>([]); // TODO: chưa dùng, chuẩn bị sẵn cho sau
   const [trips, setTrips] = useState<Trip[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
   // ---- CRUD trực tiếp: routes (đơn giản, không cần edge function) ----
@@ -54,8 +60,24 @@ export function useDispatchData(selectedDate: string) {
     // Parse as local time (append T00:00:00 so "YYYY-MM-DD" isn't treated as UTC midnight)
     const d = new Date(typeof date === "string" ? `${date}T00:00:00` : date);
     // Build UTC boundaries for the local calendar day so Supabase (UTC timestamptz) is filtered correctly
-    const dayStart = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 0, 0, 0, 0).toISOString();
-    const dayEnd = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 23, 59, 59, 999).toISOString();
+    const dayStart = new Date(
+      d.getFullYear(),
+      d.getMonth(),
+      d.getDate(),
+      0,
+      0,
+      0,
+      0,
+    ).toISOString();
+    const dayEnd = new Date(
+      d.getFullYear(),
+      d.getMonth(),
+      d.getDate(),
+      23,
+      59,
+      59,
+      999,
+    ).toISOString();
 
     const { data, error: err } = await supabase
       .from("trips")
@@ -82,62 +104,60 @@ export function useDispatchData(selectedDate: string) {
     return (data ?? []) as unknown as Trip[];
   }, []);
 
-  const loadAll = useCallback(async (date: Date | string) => {
-    setLoading(true);
-    setError(null);
-    try {
-      const [routesData, vehiclesData, driversData, tripsData] = await Promise
-        .all([
-          fetchRoutes(),
-          fetchVehicles(),
-          fetchDrivers(),
-          fetchTrips(date),
-        ]);
-      setRoutes(routesData);
-      setVehicles(vehiclesData);
-      setDrivers(driversData);
-      setTrips(tripsData);
-    } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "Đã có lỗi xảy ra");
-    } finally {
-      setLoading(false);
-    }
+  const loadAll = useCallback((date: Date | string) => {
+    startTransition(async () => {
+      setError(null);
+      try {
+        const [routesData, vehiclesData, driversData, tripsData] = await Promise
+          .all([
+            fetchRoutes(),
+            fetchVehicles(),
+            fetchDrivers(),
+            fetchTrips(date),
+          ]);
+        setRoutes(routesData);
+        setVehicles(vehiclesData);
+        setDrivers(driversData);
+        setTrips(tripsData);
+      } catch (e: unknown) {
+        setError(e instanceof Error ? e.message : "Đã có lỗi xảy ra");
+      }
+    });
   }, [fetchRoutes, fetchVehicles, fetchDrivers, fetchTrips]);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    void loadAll(selectedDate);
+    loadAll(selectedDate);
   }, [selectedDate, loadAll]);
 
   // ---- Tạo trip mới: gọi Edge Function (có check trùng lịch xe) ----
   const createTrip = useCallback(
-    async ({ route_id, vehicle_id, planned_departure_time, trip_code }: CreateTripInput) => {
-      // console.log("=====", planned_departure_time);
-      const { data: sessionData } = await supabase.auth.getSession();
-      const token = sessionData?.session?.access_token;
-
-      const res = await fetch(EDGE_FUNCTION_URL, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          route_id,
-          vehicle_id,
-          planned_departure_time,
-          trip_code,
-          // driver_id, // TODO: bật lại khi có chức năng gán tài xế
-        }),
-      });
-
-      const json = await res.json();
-      if (!res.ok) {
-        throw new Error(json.error ?? "Không thể tạo chuyến xe");
+    async (
+      { route_id, vehicle_id, planned_departure_time, trip_code }:
+        CreateTripInput,
+    ) => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        console.log(user);
+        const { data } = await edgeFunctionClient.post<{ trip: Trip }>(
+          "/schedule-trip",
+          {
+            route_id,
+            vehicle_id,
+            planned_departure_time,
+            trip_code,
+            // driver_id, // TODO: bật lại khi có chức năng gán tài xế
+          },
+        );
+        loadAll(selectedDate);
+        return data.trip;
+      } catch (err: unknown) {
+        const msg = axios.isAxiosError(err)
+          ? (err.response?.data?.error ?? err.message)
+          : err instanceof Error
+          ? err.message
+          : "Không thể tạo chuyến xe";
+        throw new Error(msg, { cause: err });
       }
-
-      await loadAll(selectedDate);
-      return json.trip;
     },
     [loadAll, selectedDate],
   );
@@ -150,7 +170,7 @@ export function useDispatchData(selectedDate: string) {
         .update({ trip_status })
         .eq("id", tripId);
       if (err) throw err;
-      await loadAll(selectedDate);
+      loadAll(selectedDate);
     },
     [loadAll, selectedDate],
   );
@@ -163,7 +183,7 @@ export function useDispatchData(selectedDate: string) {
         .delete()
         .eq("id", tripId);
       if (err) throw err;
-      await loadAll(selectedDate);
+      loadAll(selectedDate);
     },
     [loadAll, selectedDate],
   );
@@ -173,7 +193,7 @@ export function useDispatchData(selectedDate: string) {
     vehicles,
     drivers,
     trips,
-    loading,
+    loading: isPending,
     error,
     createTrip,
     updateTripStatus,

@@ -3,9 +3,10 @@ import { SeatPicker } from "./SeatPicker";
 import { CustomerForm } from "./CustomerForm";
 import { INITIAL_FORM } from "./types";
 import type { BookingForm, Seat, Trip, TripSeat } from "./types";
-import { supabase } from "@/utils/supabase";
 import { BookingFormFields } from "./BookingForm";
 import { formatDate, formatTime } from "@/utils/helpers";
+import { edgeFunctionClient } from "@/utils/axiosClient";
+import axios from "axios";
 
 interface Props {
   trip: Trip;
@@ -69,42 +70,27 @@ export function BookingModal({
       .filter(Boolean);
 
     try {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-      const res = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-booking`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${
-              session?.access_token ?? import.meta.env.VITE_SUPABASE_ANON_KEY
-            }`,
-            apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
-          },
-          body: JSON.stringify({
-            customer_id: form.isNewCustomer ? undefined : form.customer_id,
-            customer_name: form.isNewCustomer ? form.customer_name : undefined,
-            customer_phone: form.isNewCustomer
-              ? form.customer_phone
-              : undefined,
-            customer_note: form.isNewCustomer
-              ? form.customer_note || undefined
-              : undefined,
-            trip_id: trip.id,
-            seat_ids: selectedSeatIds,
-            pickup_address: form.pickup_address,
-            dropoff_address: form.dropoff_address,
-            fare_amount: Number(form.fare_amount),
-          }),
-        },
-      );
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error ?? "Có lỗi xảy ra");
+      await edgeFunctionClient.post("/create-booking", {
+        customer_id: form.isNewCustomer ? undefined : form.customer_id,
+        customer_name: form.isNewCustomer ? form.customer_name : undefined,
+        customer_phone: form.isNewCustomer ? form.customer_phone : undefined,
+        customer_note: form.isNewCustomer
+          ? form.customer_note || undefined
+          : undefined,
+        trip_id: trip.id,
+        seat_ids: selectedSeatIds,
+        pickup_address: form.pickup_address,
+        dropoff_address: form.dropoff_address,
+        fare_amount: Number(form.fare_amount),
+      });
       onSuccess();
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "Có lỗi xảy ra");
+      const msg = axios.isAxiosError(e)
+        ? (e.response?.data?.error ?? e.message)
+        : e instanceof Error
+        ? e.message
+        : "Có lỗi xảy ra";
+      setError(msg);
     } finally {
       setSubmitting(false);
     }

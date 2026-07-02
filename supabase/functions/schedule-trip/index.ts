@@ -44,7 +44,7 @@ Deno.serve(async (req: Request) => {
   try {
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
-      // Dùng service role để có quyền check toàn bộ trips + insert,
+      // Service role key: bypass RLS để check toàn bộ trips + insert,
       // bất kể RLS của user đang gọi (vì logic check cần thấy hết dữ liệu).
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
     );
@@ -168,9 +168,10 @@ Deno.serve(async (req: Request) => {
         const earliest = new Date(prevMs + MIN_GAP_MINUTES * 60 * 1000);
         return jsonResponse(
           {
-            error:
-              `Xe cần nghỉ ít nhất 2h30p giữa 2 chuyến. ` +
-              `Chuyến ${prevTrip.trip_code} lúc ${fmt(new Date(prevTrip.planned_departure_time))}, ` +
+            error: `Xe cần nghỉ ít nhất 2h30p giữa 2 chuyến. ` +
+              `Chuyến ${prevTrip.trip_code} lúc ${
+                fmt(new Date(prevTrip.planned_departure_time))
+              }, ` +
               `sớm nhất có thể thêm chuyến từ ${fmt(earliest)}.`,
             conflict: prevTrip,
             min_gap_minutes: MIN_GAP_MINUTES,
@@ -185,8 +186,7 @@ Deno.serve(async (req: Request) => {
       if (prevDest && prevDest !== route.origin) {
         return jsonResponse(
           {
-            error:
-              `Sau chuyến ${prevTrip.trip_code}, xe đang ở ${prevDest}. ` +
+            error: `Sau chuyến ${prevTrip.trip_code}, xe đang ở ${prevDest}. ` +
               `Không thể tạo chuyến xuất phát từ ${route.origin}.`,
             conflict: prevTrip,
           },
@@ -204,8 +204,12 @@ Deno.serve(async (req: Request) => {
         return jsonResponse(
           {
             error:
-              `Chuyến ${nextTrip.trip_code} lúc ${fmt(new Date(nextTrip.planned_departure_time))} ` +
-              `chỉ cách chuyến mới ${Math.round(gapMinutes)} phút (cần tối thiểu 2h30p).`,
+              `Chuyến ${nextTrip.trip_code} lúc ${
+                fmt(new Date(nextTrip.planned_departure_time))
+              } ` +
+              `chỉ cách chuyến mới ${
+                Math.round(gapMinutes)
+              } phút (cần tối thiểu 2h30p).`,
             conflict: nextTrip,
             min_gap_minutes: MIN_GAP_MINUTES,
           },
@@ -219,8 +223,7 @@ Deno.serve(async (req: Request) => {
       if (nextOrigin && route.destination !== nextOrigin) {
         return jsonResponse(
           {
-            error:
-              `Sau chuyến mới, xe sẽ ở ${route.destination} ` +
+            error: `Sau chuyến mới, xe sẽ ở ${route.destination} ` +
               `nhưng chuyến ${nextTrip.trip_code} xuất phát từ ${nextOrigin}. ` +
               `Vị trí không khớp.`,
             conflict: nextTrip,

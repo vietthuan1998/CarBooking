@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useTransition, useState } from "react";
 import {
   Car,
   CheckCircle2,
@@ -27,8 +27,8 @@ const EMPTY_FORM: VehicleFormInput = {
 type StatusFilter = "all" | "active" | "inactive";
 
 export default function VehiclesPage() {
+  const [isPending, startTransition] = useTransition();
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
-  const [loading, setLoading] = useState(true);
   const [pageError, setPageError] = useState<string | null>(null);
 
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
@@ -45,23 +45,22 @@ export default function VehiclesPage() {
   const [deleteTarget, setDeleteTarget] = useState<Vehicle | null>(null);
   const [deleting, setDeleting] = useState(false);
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    setPageError(null);
-    try {
-      setVehicles(await getVehicles());
-    } catch (e: unknown) {
-      setPageError(
-        e instanceof Error ? e.message : "Không thể tải danh sách xe",
-      );
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const load = useCallback(() => {
+    startTransition(async () => {
+      try {
+        const data = await getVehicles();
+        setVehicles(data);
+        setPageError(null);
+      } catch (e: unknown) {
+        setPageError(
+          e instanceof Error ? e.message : "Không thể tải danh sách xe",
+        );
+      }
+    });
+  }, [startTransition]);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    void load();
+    load();
   }, [load]);
 
   const filtered = vehicles.filter((v) => {
@@ -117,7 +116,7 @@ export default function VehiclesPage() {
         await updateVehicle(modal.vehicle.id, form);
       }
       setModal(null);
-      await load();
+      load();
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : "Lưu thất bại";
       setFormError(
@@ -136,7 +135,7 @@ export default function VehiclesPage() {
     try {
       await deleteVehicle(deleteTarget.id);
       setDeleteTarget(null);
-      await load();
+      load();
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : "Xóa thất bại";
       alert(
@@ -154,7 +153,7 @@ export default function VehiclesPage() {
       await updateVehicle(v.id, {
         status: v.status === "active" ? "inactive" : "active",
       });
-      await load();
+      load();
     } catch (e: unknown) {
       alert(e instanceof Error ? e.message : "Cập nhật trạng thái thất bại");
     }
@@ -232,7 +231,7 @@ export default function VehiclesPage() {
 
       {/* Table */}
       <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">
-        {loading ? (
+        {isPending ? (
           <div className="flex items-center justify-center py-16">
             <div className="h-7 w-7 animate-spin rounded-full border-2 border-emerald-500 border-t-transparent" />
           </div>

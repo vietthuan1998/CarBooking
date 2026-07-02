@@ -23,7 +23,7 @@ export interface Trip {
 export interface TripSeat {
   id: string;
   seat_id: string;
-  status: "available" | "booked" | "reserved";
+  status: "available" | "locked" | "booked";
   booking_id: string | null;
   seat: Seat;
 }
