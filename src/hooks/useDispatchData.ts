@@ -8,7 +8,7 @@ import type {
   Trip,
   TripStatus,
   Vehicle,
-} from "../../features/dispatch/types";
+} from "@/features/dispatch/types";
 import { edgeFunctionClient } from "@/utils/axiosClient";
 import axios from "axios";
 

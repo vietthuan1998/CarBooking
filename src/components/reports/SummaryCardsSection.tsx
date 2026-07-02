@@ -1,7 +1,7 @@
 import { Car, DollarSign, TicketCheck, TrendingUp } from "lucide-react";
 import type { ReportOverview } from "../../services/reportService";
 import { SummaryCard } from "./SummaryCard";
-import { fCurrency } from "./utils";
+import { fCurrency } from "@/utils/helpers";
 
 interface Props {
   overview: ReportOverview | null;

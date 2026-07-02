@@ -1,8 +1,8 @@
 import { SeatPicker } from "./SeatPicker";
 import { TripCardHeader } from "./TripCardHeader";
-import { TripBookingForm } from "./TripBookingForm";
-import { useTripBooking } from "../../hooks/useTripBooking";
 import type { BookingForm, Trip } from "./types";
+import { TripBookingForm } from "./TripBookingForm";
+import { useTripBooking } from "@/hooks/useTripBooking";
 
 interface Props {
   trip: Trip;

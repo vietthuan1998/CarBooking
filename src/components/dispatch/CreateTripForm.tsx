@@ -8,7 +8,7 @@ import type {
   Trip,
   Vehicle,
 } from "../../features/dispatch/types";
-import { todayDateInputValue } from "./utils";
+import { todayDateInputValue } from "@/utils/helpers";
 
 interface CreateTripFormProps {
   routesInColumn: Route[];

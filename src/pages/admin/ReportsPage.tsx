@@ -9,7 +9,7 @@ import { ReportsHeader } from "../../components/reports/ReportsHeader";
 import { DateRangeFilter } from "../../components/reports/DateRangeFilter";
 import { SummaryCardsSection } from "../../components/reports/SummaryCardsSection";
 import { VehiclePerformanceTable } from "../../components/reports/VehiclePerformanceTable";
-import { getPresetDates, type PresetKey } from "../../components/reports/utils";
+import { getPresetDates, type PresetKey } from "@/utils/helpers";
 
 export default function ReportsPage() {
   const [preset, setPreset] = useState<PresetKey>("this_month");

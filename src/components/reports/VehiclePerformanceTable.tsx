@@ -1,5 +1,5 @@
+import { fCurrency } from "@/utils/helpers";
 import type { VehiclePerformance } from "../../services/reportService";
-import { fCurrency } from "./utils";
 
 interface Props {
   performance: VehiclePerformance[];
