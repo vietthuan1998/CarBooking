@@ -14,7 +14,7 @@ function formatTime(value: string) {
 function getAvailableSeats(trip: UpcomingTrip) {
   const totalSeats = trip.vehicle?.seat_count ?? 0;
   const assignedSeats = trip.trip_seats.filter(
-    (seat) => seat.status === "assigned"
+    (seat) => seat.status === "booked" || seat.status === "occupied"
   ).length;
 
   return Math.max(totalSeats - assignedSeats, 0);
@@ -34,12 +34,15 @@ export function UpcomingTripsCard({ trips }: Props) {
         {trips.map((trip) => (
           <div
             className="rounded-3xl border border-slate-200 bg-slate-50 px-4 py-4 shadow-sm transition hover:border-slate-300 hover:bg-white"
-            key={trip.id}
+            key={trip.vehicle?.plate_number ?? trip.id}
           >
             <div>
               <strong className="text-sm font-semibold text-slate-900">{trip.trip_code}</strong>
               <p className="mt-1 text-sm text-slate-600">
                 {trip.route?.origin} → {trip.route?.destination}
+              </p>
+              <p className="mt-1 text-sm font-medium text-slate-700">
+                {trip.vehicle?.plate_number ? `Biển số: ${trip.vehicle.plate_number}` : "Chưa có biển số"}
               </p>
             </div>
 

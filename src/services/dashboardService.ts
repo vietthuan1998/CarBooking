@@ -115,6 +115,7 @@ export async function getUpcomingTrips(date: Date): Promise<UpcomingTrip[]> {
         destination
       ),
       vehicle:vehicles (
+        plate_number,
         seat_count
       ),
       trip_seats (
