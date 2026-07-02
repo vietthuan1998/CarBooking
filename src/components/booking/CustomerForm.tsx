@@ -1,5 +1,5 @@
 import { CustomerSearch } from "./CustomerSearch";
-import type { BookingForm, Customer } from "./types";
+import type { BookingForm, Customer } from "@/features/booking/types";
 
 interface Props {
   form: BookingForm;

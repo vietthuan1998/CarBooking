@@ -2,9 +2,9 @@ import { useState } from "react";
 import { Toast } from "../../components/booking/Toast";
 import { BookingsHeader } from "../../components/booking/BookingsHeader";
 import { BookingsBody } from "../../components/booking/BookingsBody";
-import { INITIAL_FORM } from "../../components/booking/types";
-import type { BookingForm } from "../../components/booking/types";
-import { useBookingsData } from "./useBookingsData";
+import { INITIAL_FORM } from "@/features/booking/types";
+import type { BookingForm } from "@/features/booking/types";
+import { useBookingsData } from "@/hooks/useBookingsData";
 
 export default function BookingsPage() {
   const {

@@ -1,6 +1,6 @@
 import { TripColumn } from "./TripColumn";
-import type { BookingForm, Trip } from "./types";
-import type { Direction } from "../../pages/booking/useBookingsData";
+import type { BookingForm, Trip } from "@/features/booking/types";
+import type { Direction } from "@/hooks/useBookingsData";
 
 interface Props {
   loading: boolean;

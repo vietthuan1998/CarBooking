@@ -1,4 +1,4 @@
-import type { BookingForm } from "./types";
+import type { BookingForm } from "@/features/booking/types";
 
 interface Props {
   form: BookingForm;

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import { supabase } from "../../utils/supabase";
-import type { Trip } from "../../components/booking/types";
+import { supabase } from "@/utils/supabase";
+import type { Trip } from "@/features/booking/types";
 
 export type Direction = "hue_to_dest" | "dest_to_hue";
 

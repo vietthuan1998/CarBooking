@@ -1,7 +1,7 @@
 import CarTopView from "../car/CarTopView";
 import { fourSeatLayout, sevenSeatLayout } from "../car/SeatLayout";
 import { Legend } from "./Legend";
-import type { Seat, TripSeat } from "./types";
+import type { Seat, TripSeat } from "@/features/booking/types";
 
 interface Props {
   seats: Seat[];

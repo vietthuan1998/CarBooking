@@ -1,11 +1,6 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
-import type {
-  BookingForm,
-  Seat,
-  Trip,
-  TripSeat,
-} from "../components/booking/types";
+import type { BookingForm, Seat, Trip, TripSeat } from "@/features/booking/types";
 import { edgeFunctionClient } from "@/utils/axiosClient";
 import { getTripSeatsWithBookings } from "@/services/bookingService";
 

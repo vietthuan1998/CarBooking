@@ -1,6 +1,6 @@
 import { SeatPicker } from "./SeatPicker";
 import { TripCardHeader } from "./TripCardHeader";
-import type { BookingForm, Trip } from "./types";
+import type { BookingForm, Trip } from "@/features/booking/types";
 import { TripBookingForm } from "./TripBookingForm";
 import { useTripBooking } from "@/hooks/useTripBooking";
 
