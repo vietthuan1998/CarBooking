@@ -1,4 +1,4 @@
-import type { CarLayout } from "./types";
+import type { CarLayout } from "../../features/car/types";
 
 export const sevenSeatLayout: CarLayout = {
   seats: [

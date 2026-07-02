@@ -1,6 +1,6 @@
 // src/features/dispatch/components/TripCard.tsx
-import { STATUS_BADGE_CLASS, STATUS_LABEL } from "./constants";
-import type { Trip } from "./types";
+import { STATUS_BADGE_CLASS, STATUS_LABEL } from "../../utils/constants";
+import type { Trip } from "../../features/dispatch/types";
 import { formatTime } from "./utils";
 
 interface TripCardProps {

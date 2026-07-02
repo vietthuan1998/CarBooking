@@ -1,6 +1,6 @@
 // src/features/dispatch/useDispatchColumns.ts
 import { useMemo } from "react";
-import type { Route, Trip } from "./types";
+import type { Route, Trip } from "../../features/dispatch/types";
 import { getRouteColumn } from "./utils";
 
 interface DispatchColumnsResult {
