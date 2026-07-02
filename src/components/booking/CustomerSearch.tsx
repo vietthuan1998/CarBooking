@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import type { Customer } from "./types";
+import type { Customer } from "@/features/booking/types";
 import { supabase } from "@/utils/supabase";
 
 interface Props {

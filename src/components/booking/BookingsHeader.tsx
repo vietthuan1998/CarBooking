@@ -1,4 +1,4 @@
-import type { TripStatus } from "../../pages/booking/useBookingsData";
+import type { TripStatus } from "@/hooks/useBookingsData";
 
 const STATUS_LABELS: Record<TripStatus, string> = {
   all: "Tất cả",

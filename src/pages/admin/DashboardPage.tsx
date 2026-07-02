@@ -1,7 +1,7 @@
 import {useState} from "react";
 import { CalendarDays, Car, Clock, Users, TicketCheck } from "lucide-react";
 import { useDashboard } from "../../hooks/useDashboard";
-import { StatCard } from "../../components/dashboard/StatCard ";
+import { StatCard } from "../../components/dashboard/StatCard";
 import { UpcomingTripsCard } from "../../components/dashboard/UpcomingTripsCard";
 import { RunningTripsCard } from "../../components/dashboard/RunningTripsCard";
 import { PendingBookingsTable } from "../../components/dashboard/PendingBookingsTable";

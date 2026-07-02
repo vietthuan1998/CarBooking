@@ -1,5 +1,5 @@
 import { TripCard } from "./TripCard";
-import type { BookingForm, Trip } from "./types";
+import type { BookingForm, Trip } from "@/features/booking/types";
 
 interface Props {
   title: string;

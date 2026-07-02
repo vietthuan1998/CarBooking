@@ -1,4 +1,4 @@
-import type { Trip } from "./types";
+import type { Trip } from "@/features/booking/types";
 import { formatDate, formatTime } from "@/utils/helpers";
 
 const STATUS_LABEL: Record<string, string> = {
