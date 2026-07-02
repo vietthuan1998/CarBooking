@@ -1,6 +1,6 @@
 // src/features/dispatch/api.ts
 import axios from "axios";
-import type { CreateTripInput, Trip } from "./types";
+import type { CreateTripInput, Trip } from "../../features/dispatch/types";
 import { edgeFunctionClient } from "@/utils/axiosClient";
 
 interface ScheduleTripResponse {

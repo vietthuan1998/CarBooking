@@ -1,6 +1,6 @@
 import { CarBody } from "./CarBody";
 import { SeatMap } from "./SeatMap";
-import type { CarLayout } from "./types";
+import type { CarLayout } from "../../features/car/types";
 
 interface CarTopViewProps {
   layout: CarLayout;

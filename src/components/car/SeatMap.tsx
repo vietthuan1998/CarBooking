@@ -1,5 +1,5 @@
 import { Seat } from "./Seat";
-import type { CarLayout } from "./types";
+import type { CarLayout } from "../../features/car/types";
 
 interface SeatMapProps {
   layout: CarLayout;

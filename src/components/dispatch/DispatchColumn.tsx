@@ -1,5 +1,10 @@
 // src/features/dispatch/components/DispatchColumn.tsx
-import type { CreateTripInput, Route, Trip, Vehicle } from "./types";
+import type {
+  CreateTripInput,
+  Route,
+  Trip,
+  Vehicle,
+} from "../../features/dispatch/types";
 import { CreateTripForm } from "./CreateTripForm";
 import { TripCard } from "./TripCard";
 

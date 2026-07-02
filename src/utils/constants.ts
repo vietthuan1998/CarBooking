@@ -1,5 +1,5 @@
 // src/features/dispatch/constants.ts
-import type { TripStatus } from "./types";
+import type { TripStatus } from "../features/dispatch/types";
 
 export const STATUS_LABEL: Record<TripStatus, string> = {
   scheduled: "Đã lên lịch",

@@ -2,8 +2,13 @@
 
 import { useState } from "react";
 import type * as React from "react";
-import type { CreateTripInput, Route, Trip, Vehicle } from "./types";
-import { todayDateInputValue } from "./utils";
+import type {
+  CreateTripInput,
+  Route,
+  Trip,
+  Vehicle,
+} from "../../features/dispatch/types";
+import { todayDateInputValue } from "@/utils/helpers";
 
 interface CreateTripFormProps {
   routesInColumn: Route[];
@@ -38,7 +43,9 @@ export function CreateTripForm({
 
     // Convert local time to UTC ISO so Supabase stores the correct moment.
     // Without this, "15:30" (Vietnam UTC+7) would be saved as 15:30 UTC → displayed as 22:30.
-    const plannedDepartureTime = new Date(`${selectedDate}T${time}:00`).toISOString();
+    const plannedDepartureTime = new Date(
+      `${selectedDate}T${time}:00`,
+    ).toISOString();
 
     setSubmitting(true);
     try {

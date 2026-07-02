@@ -1,6 +1,6 @@
 // src/features/dispatch/useDispatchData.js
 import { supabase } from "@/utils/supabase";
-import { useCallback, useEffect, useTransition, useState } from "react";
+import { useCallback, useEffect, useState, useTransition } from "react";
 import type {
   CreateTripInput,
   Driver,
@@ -8,7 +8,7 @@ import type {
   Trip,
   TripStatus,
   Vehicle,
-} from "./types";
+} from "@/features/dispatch/types";
 import { edgeFunctionClient } from "@/utils/axiosClient";
 import axios from "axios";
 
