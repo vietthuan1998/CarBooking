@@ -11,6 +11,7 @@ export interface Route {
   route_name: string;
   origin: string;
   destination: string;
+  base_price: number;
   status: string;
 }
 

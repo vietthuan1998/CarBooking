@@ -1,10 +1,11 @@
 import { TripCard } from "./TripCard";
-import type { BookingForm, Trip } from "@/features/booking/types";
+import type { BookingForm, Route, Trip } from "@/features/booking/types";
 
 interface Props {
   title: string;
   subtitle: string;
   trips: Trip[];
+  routes: Route[];
   activeFormTripId: string | null;
   onFormOpen: (tripId: string | null) => void;
   form: BookingForm;
@@ -17,6 +18,7 @@ export function TripColumn({
   title,
   subtitle,
   trips,
+  routes,
   activeFormTripId,
   onFormOpen,
   form,
@@ -40,6 +42,7 @@ export function TripColumn({
           <TripCard
             key={trip.id}
             trip={trip}
+            routes={routes}
             activeFormTripId={activeFormTripId}
             onFormOpen={onFormOpen}
             form={form}

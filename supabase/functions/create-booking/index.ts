@@ -14,7 +14,8 @@
 //   "seat_ids": ["uuid", ...],
 //   "pickup_address": "...",
 //   "dropoff_address": "...",
-//   "fare_amount": 150000
+//   "route_id": "uuid"                // tuyến cụ thể khách chọn (VD: Huế -> Hội An),
+//                                      // fare_amount = routes.base_price * số ghế
 // }
 
 import { createClient } from "jsr:@supabase/supabase-js@2";
@@ -22,6 +23,7 @@ import { corsHeaders, HttpError, json } from "./lib/http.ts";
 import { validateBookingRequest } from "./lib/validate.ts";
 import { resolveCustomerId } from "./lib/customer.ts";
 import { assertTripBookable, getAvailableTripSeats } from "./lib/trip.ts";
+import { resolveBookingRoute } from "./lib/route.ts";
 import { insertBooking, logBookingCreated, markSeatsBooked } from "./lib/booking.ts";
 
 Deno.serve(async (req: Request) => {
@@ -41,10 +43,12 @@ Deno.serve(async (req: Request) => {
 
     const customerId = await resolveCustomerId(supabase, request);
 
-    await assertTripBookable(supabase, request.trip_id);
+    const trip = await assertTripBookable(supabase, request.trip_id);
     const tripSeats = await getAvailableTripSeats(supabase, request.trip_id, request.seat_ids);
+    const route = await resolveBookingRoute(supabase, request.route_id, trip);
 
-    const booking = await insertBooking(supabase, request, customerId);
+    const fareAmount = Number(route.base_price) * request.seat_ids.length;
+    const booking = await insertBooking(supabase, request, customerId, fareAmount);
 
     await markSeatsBooked(supabase, tripSeats.map((ts) => ts.id), booking.id);
     await logBookingCreated(supabase, booking.id);

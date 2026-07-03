@@ -6,6 +6,7 @@
 // }
 
 import type { Route } from "@/features/dispatch/types";
+import { TIMELINE_DAY_START, TIMELINE_DAY_SPAN } from "@/utils/constants";
 
 export function formatDate(iso: string | undefined) {
   if (!iso) return "-";
@@ -96,6 +97,25 @@ export function getPresetDates(key: PresetKey): [Date, Date] {
         new Date(today.getFullYear(), today.getMonth(), 0),
       ];
   }
+}
+
+/** Phút trong ngày (theo giờ local của trình duyệt) của 1 mốc thời gian ISO. */
+export function minutesOfDay(iso: string): number {
+  const d = new Date(iso);
+  return d.getHours() * 60 + d.getMinutes();
+}
+
+/** "HH:mm" (giờ local) từ 1 mốc thời gian ISO — đúng định dạng value của <input type="time">. */
+export function timeInputValue(iso: string): string {
+  const d = new Date(iso);
+  const hh = String(d.getHours()).padStart(2, "0");
+  const mm = String(d.getMinutes()).padStart(2, "0");
+  return `${hh}:${mm}`;
+}
+
+/** Vị trí % trên timeline (5h-20h) ứng với 1 mốc phút trong ngày. */
+export function timelinePercent(minutes: number): number {
+  return ((minutes - TIMELINE_DAY_START) / TIMELINE_DAY_SPAN) * 100;
 }
 
 export function toInputValue(d: Date): string {

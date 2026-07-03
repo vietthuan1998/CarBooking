@@ -1,13 +1,19 @@
 import type { SupabaseClient } from "jsr:@supabase/supabase-js@2";
 import { HttpError, orThrow500 } from "./http.ts";
 
+interface TripWithRoute {
+  id: string;
+  trip_status: string;
+  route: { origin: string; destination: string } | null;
+}
+
 export async function assertTripBookable(
   supabase: SupabaseClient,
   tripId: string,
-): Promise<void> {
+): Promise<TripWithRoute> {
   const { data: trip, error } = await supabase
     .from("trips")
-    .select("id, trip_status")
+    .select("id, trip_status, route:routes(origin, destination)")
     .eq("id", tripId)
     .maybeSingle();
 
@@ -16,6 +22,7 @@ export async function assertTripBookable(
   if (trip.trip_status !== "scheduled") {
     throw new HttpError(409, `Chuyến xe không thể đặt (trạng thái: ${trip.trip_status})`);
   }
+  return trip as unknown as TripWithRoute;
 }
 
 export async function getAvailableTripSeats(

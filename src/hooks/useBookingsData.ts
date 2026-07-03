@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/utils/supabase";
-import type { Trip } from "@/features/booking/types";
+import type { Route, Trip } from "@/features/booking/types";
 
 export type Direction = "hue_to_dest" | "dest_to_hue";
 
@@ -26,9 +26,31 @@ type FetchedData = {
 
 export function useBookingsData() {
   const [fetchedData, setFetchedData] = useState<FetchedData | null>(null);
+  const [routes, setRoutes] = useState<Route[]>([]);
   const [selectedDate, setSelectedDate] = useState<string>(todayInputValue());
   const [statusFilter, setStatusFilter] = useState<TripStatus>("all");
   const [refreshKey, setRefreshKey] = useState(0);
+
+  // Danh sách tuyến (kèm base_price) để khách chọn tuyến cụ thể lúc đặt vé.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const { data, error } = await supabase
+        .from("routes")
+        .select("id, route_name, origin, destination, base_price")
+        .eq("status", "active")
+        .order("route_name");
+      if (cancelled) return;
+      if (error) {
+        console.error(error);
+        return;
+      }
+      setRoutes((data ?? []) as unknown as Route[]);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   // loading is derived: true whenever current deps don't match last fetched data
   const depsKey = `${selectedDate}|${statusFilter}|${refreshKey}`;
@@ -107,6 +129,7 @@ export function useBookingsData() {
 
   return {
     trips,
+    routes,
     loading,
     totalTrips,
     selectedDate,

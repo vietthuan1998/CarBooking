@@ -1,11 +1,13 @@
 import { SeatPicker } from "./SeatPicker";
 import { TripCardHeader } from "./TripCardHeader";
-import type { BookingForm, Trip } from "@/features/booking/types";
+import type { BookingForm, Route, Trip } from "@/features/booking/types";
 import { TripBookingForm } from "./TripBookingForm";
 import { useTripBooking } from "@/hooks/useTripBooking";
+import { getRouteColumn } from "@/utils/helpers";
 
 interface Props {
   trip: Trip;
+  routes: Route[];
   activeFormTripId: string | null;
   onFormOpen: (tripId: string | null) => void;
   form: BookingForm;
@@ -16,6 +18,7 @@ interface Props {
 
 export function TripCard({
   trip,
+  routes,
   activeFormTripId,
   onFormOpen,
   form,
@@ -24,6 +27,12 @@ export function TripCard({
   onError,
 }: Props) {
   const isActive = activeFormTripId === trip.id;
+
+  // Các tuyến cùng chiều với chuyến này (VD: Huế → Đà Nẵng, Huế → Hội An)
+  // để khách chọn điểm đến cụ thể và tính giá vé tương ứng.
+  const directionRoutes = routes.filter(
+    (r) => getRouteColumn(r) === getRouteColumn(trip.route),
+  );
 
   const {
     tripSeats,
@@ -79,6 +88,7 @@ export function TripCard({
           onFormChange={onFormChange}
           origin={trip.route.origin}
           destination={trip.route.destination}
+          routes={directionRoutes}
           selectedCount={selectedSeatOrders.length}
           error={formError}
           submitting={submitting}
