@@ -19,6 +19,7 @@ export type UpcomingTrip = {
     destination: string;
   } | null;
   vehicle: {
+    plate_number: string;
     seat_count: number;
   } | null;
   trip_seats: {
