@@ -89,7 +89,7 @@ export function useTripBooking({
       isNewCustomer: true,
       pickup_address: "",
       dropoff_address: "",
-      fare_amount: "",
+      route_id: "",
     });
     setFormError(null);
     onFormOpen(null);
@@ -109,8 +109,8 @@ export function useTripBooking({
       setFormError("Vui lòng nhập địa chỉ đón và trả");
       return;
     }
-    if (!form.fare_amount || isNaN(Number(form.fare_amount))) {
-      setFormError("Vui lòng nhập giá vé hợp lệ");
+    if (!form.route_id) {
+      setFormError("Vui lòng chọn tuyến đi");
       return;
     }
 
@@ -132,7 +132,7 @@ export function useTripBooking({
         seat_ids: selectedSeatIds,
         pickup_address: form.pickup_address,
         dropoff_address: form.dropoff_address,
-        fare_amount: Number(form.fare_amount),
+        route_id: form.route_id,
       });
 
       await loadSeats();

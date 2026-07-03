@@ -24,7 +24,7 @@ export function useDispatchData(selectedDate: string) {
   const fetchRoutes = useCallback(async () => {
     const { data, error: err } = await supabase
       .from("routes")
-      .select("id, route_name, origin, destination, status")
+      .select("id, route_name, origin, destination, base_price, status")
       .eq("status", "active")
       .order("route_name");
     if (err) throw err;
@@ -129,37 +129,65 @@ export function useDispatchData(selectedDate: string) {
     loadAll(selectedDate);
   }, [selectedDate, loadAll]);
 
-  // ---- Tạo trip mới: gọi Edge Function (có check trùng lịch xe) ----
-  const createTrip = useCallback(
+  // ---- Gọi Edge Function tạo 1 trip (có check trùng lịch xe ở server) ----
+  const scheduleTripRequest = useCallback(
     async (
       { route_id, vehicle_id, planned_departure_time, trip_code }:
         CreateTripInput,
     ) => {
+      const { data } = await edgeFunctionClient.post<{ trip: Trip }>(
+        "/schedule-trip",
+        {
+          route_id,
+          vehicle_id,
+          planned_departure_time,
+          trip_code,
+          // driver_id, // TODO: bật lại khi có chức năng gán tài xế
+        },
+      );
+      return data.trip;
+    },
+    [],
+  );
+
+  const scheduleTripErrorMessage = (err: unknown): string =>
+    axios.isAxiosError(err)
+      ? (err.response?.data?.error ?? err.message)
+      : err instanceof Error
+      ? err.message
+      : "Không thể tạo chuyến xe";
+
+  // ---- Tạo 1 trip mới ----
+  const createTrip = useCallback(
+    async (input: CreateTripInput) => {
       try {
-        const { data: { user } } = await supabase.auth.getUser();
-        console.log(user);
-        const { data } = await edgeFunctionClient.post<{ trip: Trip }>(
-          "/schedule-trip",
-          {
-            route_id,
-            vehicle_id,
-            planned_departure_time,
-            trip_code,
-            // driver_id, // TODO: bật lại khi có chức năng gán tài xế
-          },
-        );
+        const trip = await scheduleTripRequest(input);
         loadAll(selectedDate);
-        return data.trip;
+        return trip;
       } catch (err: unknown) {
-        const msg = axios.isAxiosError(err)
-          ? (err.response?.data?.error ?? err.message)
-          : err instanceof Error
-          ? err.message
-          : "Không thể tạo chuyến xe";
-        throw new Error(msg, { cause: err });
+        throw new Error(scheduleTripErrorMessage(err), { cause: err });
       }
     },
-    [loadAll, selectedDate],
+    [scheduleTripRequest, loadAll, selectedDate],
+  );
+
+  // ---- Đăng ký hàng loạt: tạo nhiều trip cùng lúc (VD: nhiều xe cho 1 chiều),
+  // gọi tuần tự để server check trùng lịch xe chính xác giữa các trip mới tạo,
+  // rồi chỉ reload dữ liệu 1 lần ở cuối. Trả về danh sách lỗi (nếu có) theo từng input.
+  const createTrips = useCallback(
+    async (inputs: CreateTripInput[]) => {
+      const failures: { input: CreateTripInput; error: string }[] = [];
+      for (const input of inputs) {
+        try {
+          await scheduleTripRequest(input);
+        } catch (err: unknown) {
+          failures.push({ input, error: scheduleTripErrorMessage(err) });
+        }
+      }
+      loadAll(selectedDate);
+      return failures;
+    },
+    [scheduleTripRequest, loadAll, selectedDate],
   );
 
   // ---- CRUD trực tiếp: cập nhật trạng thái trip (đơn giản, không cần edge function) ----
@@ -196,6 +224,7 @@ export function useDispatchData(selectedDate: string) {
     loading: isPending,
     error,
     createTrip,
+    createTrips,
     updateTripStatus,
     deleteTrip,
     refresh: () => loadAll(selectedDate),

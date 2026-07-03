@@ -9,6 +9,7 @@ import { useBookingsData } from "@/hooks/useBookingsData";
 export default function BookingsPage() {
   const {
     trips,
+    routes,
     loading,
     totalTrips,
     selectedDate,
@@ -47,6 +48,7 @@ export default function BookingsPage() {
         loading={loading}
         totalTrips={totalTrips}
         trips={trips}
+        routes={routes}
         activeFormTripId={activeFormTripId}
         onFormOpen={setActiveFormTripId}
         form={sharedForm}

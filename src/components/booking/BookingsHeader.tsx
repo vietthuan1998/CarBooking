@@ -34,15 +34,12 @@ export function BookingsHeader({
           </h1>
           <p className="mt-0.5 text-xs text-gray-400">
             {totalTrips} chuyến{totalTrips !== 1 ? "" : ""} ·{" "}
-            {new Date(`${selectedDate}T00:00:00`).toLocaleDateString(
-              "vi-VN",
-              {
-                weekday: "long",
-                day: "2-digit",
-                month: "2-digit",
-                year: "numeric",
-              },
-            )}
+            {new Date(`${selectedDate}T00:00:00`).toLocaleDateString("vi-VN", {
+              weekday: "long",
+              day: "2-digit",
+              month: "2-digit",
+              year: "numeric",
+            })}
           </p>
         </div>
         <button

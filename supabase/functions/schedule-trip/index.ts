@@ -149,6 +149,26 @@ Deno.serve(async (req: Request) => {
     const sorted = (existingTrips ?? []) as unknown as TripRow[];
     const newMs = departureDate.getTime();
 
+    // Trùng giờ chính xác (cùng xe, cùng thời điểm xuất phát): phải chặn riêng
+    // vì prevTrip/nextTrip bên dưới dùng so sánh strict (<, >) nên bỏ sót ca
+    // bằng nhau — nếu không có check này, đăng ký trùng y hệt sẽ lọt qua và
+    // tạo 2 trip giống hệt nhau cho cùng 1 xe.
+    const exactDuplicate = sorted.find(
+      (t) => new Date(t.planned_departure_time).getTime() === newMs,
+    );
+    if (exactDuplicate) {
+      return jsonResponse(
+        {
+          error: `Xe đã có chuyến ${exactDuplicate.trip_code} lúc ${
+            fmt(new Date(exactDuplicate.planned_departure_time))
+          } — không thể tạo chuyến trùng giờ.`,
+          conflict: exactDuplicate,
+          min_gap_minutes: MIN_GAP_MINUTES,
+        },
+        409,
+      );
+    }
+
     // Chuyến ngay trước chuyến mới (theo thời gian)
     const prevTrip = [...sorted]
       .reverse()

@@ -1,12 +1,13 @@
 import { CustomerForm } from "./CustomerForm";
 import { BookingFormFields } from "./BookingForm";
-import type { BookingForm } from "@/features/booking/types";
+import type { BookingForm, Route } from "@/features/booking/types";
 
 interface Props {
   form: BookingForm;
   onFormChange: (updated: Partial<BookingForm>) => void;
   origin: string;
   destination: string;
+  routes: Route[];
   selectedCount: number;
   error: string | null;
   submitting: boolean;
@@ -19,6 +20,7 @@ export function TripBookingForm({
   onFormChange,
   origin,
   destination,
+  routes,
   selectedCount,
   error,
   submitting,
@@ -32,6 +34,7 @@ export function TripBookingForm({
         form={form}
         origin={origin}
         destination={destination}
+        routes={routes}
         selectedCount={selectedCount}
         error={error}
         onChange={onFormChange}

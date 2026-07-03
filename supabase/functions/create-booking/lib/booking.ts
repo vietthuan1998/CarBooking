@@ -10,6 +10,7 @@ export async function insertBooking(
   supabase: SupabaseClient,
   request: ValidatedBookingRequest,
   customerId: string,
+  fareAmount: number,
 ) {
   const { data: booking, error } = await supabase
     .from("bookings")
@@ -17,9 +18,10 @@ export async function insertBooking(
       booking_code: generateBookingCode(),
       customer_id: customerId,
       trip_id: request.trip_id,
+      route_id: request.route_id,
       pickup_address: request.pickup_address,
       dropoff_address: request.dropoff_address,
-      fare_amount: request.fare_amount,
+      fare_amount: fareAmount,
       booking_source: "manual",
       status: "pending",
     })

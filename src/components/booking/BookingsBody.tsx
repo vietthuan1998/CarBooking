@@ -1,11 +1,12 @@
 import { TripColumn } from "./TripColumn";
-import type { BookingForm, Trip } from "@/features/booking/types";
+import type { BookingForm, Route, Trip } from "@/features/booking/types";
 import type { Direction } from "@/hooks/useBookingsData";
 
 interface Props {
   loading: boolean;
   totalTrips: number;
   trips: Record<Direction, Trip[]>;
+  routes: Route[];
   activeFormTripId: string | null;
   onFormOpen: (tripId: string | null) => void;
   form: BookingForm;
@@ -18,6 +19,7 @@ export function BookingsBody({
   loading,
   totalTrips,
   trips,
+  routes,
   activeFormTripId,
   onFormOpen,
   form,
@@ -46,6 +48,7 @@ export function BookingsBody({
             title="🚌 Huế → Đà Nẵng / Hội An"
             subtitle="Chiều đi"
             trips={trips.hue_to_dest}
+            routes={routes}
             activeFormTripId={activeFormTripId}
             onFormOpen={onFormOpen}
             form={form}
@@ -60,6 +63,7 @@ export function BookingsBody({
             title="🚌 Đà Nẵng / Hội An → Huế"
             subtitle="Chiều về"
             trips={trips.dest_to_hue}
+            routes={routes}
             activeFormTripId={activeFormTripId}
             onFormOpen={onFormOpen}
             form={form}

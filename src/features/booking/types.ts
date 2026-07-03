@@ -5,6 +5,14 @@ export interface Vehicle {
   seat_count: number;
 }
 
+export interface Route {
+  id: string;
+  route_name: string;
+  origin: string;
+  destination: string;
+  base_price: number;
+}
+
 export interface Seat {
   id: string;
   seat_code: string;
@@ -43,7 +51,7 @@ export interface BookingForm {
   isNewCustomer: boolean;
   pickup_address: string;
   dropoff_address: string;
-  fare_amount: string;
+  route_id: string;
 }
 
 export const INITIAL_FORM: BookingForm = {
@@ -54,5 +62,5 @@ export const INITIAL_FORM: BookingForm = {
   isNewCustomer: true,
   pickup_address: "",
   dropoff_address: "",
-  fare_amount: "",
+  route_id: "",
 };
