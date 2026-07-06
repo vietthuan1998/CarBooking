@@ -26,7 +26,7 @@ export const menuItems: MenuItem[] = [
   { name: "Quản lý tài xế", path: "/drivers", icon: UserRound },
   { name: "Quản lý chuyến", path: "/trips", icon: Route },
   { name: "Khách hàng", path: "/customers", icon: Users },
-  { name: "Đăng ký", path: "/signup", icon: UserPlus },
+  { name: "Tài khoản", path: "/accounts", icon: UserPlus },
   { name: "Báo cáo", path: "/reports", icon: Map },
   { name: "Cài đặt", path: "/settings", icon: Settings },
 ];

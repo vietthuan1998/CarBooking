@@ -53,7 +53,8 @@ export default function DispatchPage() {
           minutesOfDay(b.planned_departure_time),
       );
       for (let i = 1; i < sorted.length; i++) {
-        const gap = minutesOfDay(sorted[i].planned_departure_time) -
+        const gap =
+          minutesOfDay(sorted[i].planned_departure_time) -
           minutesOfDay(sorted[i - 1].planned_departure_time);
         if (gap < TRIP_TURNAROUND_MINUTES) {
           ids.add(sorted[i - 1].id);
@@ -80,17 +81,20 @@ export default function DispatchPage() {
       .map(([vehicleId, time]) => ({
         route_id: defaultRoute.id,
         vehicle_id: vehicleId,
-        planned_departure_time: new Date(`${selectedDate}T${time}:00`)
-          .toISOString(),
+        planned_departure_time: new Date(
+          `${selectedDate}T${time}:00`,
+        ).toISOString(),
       }));
     if (inputs.length === 0) return;
 
     const failures = await createTrips(inputs);
     if (failures.length > 0) {
       setRegisterError(
-        `Có ${failures.length}/${inputs.length} chuyến không đăng ký được: ${
-          failures.map((f) => f.error).join("; ")
-        }`,
+        `Có ${failures.length}/${
+          inputs.length
+        } chuyến không đăng ký được: ${failures
+          .map((f) => f.error)
+          .join("; ")}`,
       );
     }
   };
@@ -105,10 +109,15 @@ export default function DispatchPage() {
     updateTripStatus(tripId, "cancelled");
     setSelectedTripId(null);
   };
-  const handleDelete = (tripId: string) => {
-    if (window.confirm("Xóa chuyến này?")) {
-      deleteTrip(tripId);
+  const handleDelete = async (tripId: string) => {
+    if (!window.confirm("Xóa chuyến này?")) return;
+    try {
+      await deleteTrip(tripId);
       setSelectedTripId(null);
+    } catch (err: unknown) {
+      setRegisterError(
+        err instanceof Error ? err.message : "Không thể xóa chuyến",
+      );
     }
   };
 
@@ -125,7 +134,9 @@ export default function DispatchPage() {
         </div>
       )}
 
-      {loading ? <p className="text-sm text-gray-400">Đang tải dữ liệu...</p> : (
+      {loading ? (
+        <p className="text-sm text-gray-400">Đang tải dữ liệu...</p>
+      ) : (
         <>
           <div className="mb-4 grid gap-4 lg:grid-cols-2">
             <RegisterPanel
@@ -149,7 +160,9 @@ export default function DispatchPage() {
             vehicles={vehicles}
             conflictIds={conflictIds}
             selectedTripId={selectedTripId}
-            onSelect={(id) => setSelectedTripId(id === selectedTripId ? null : id)}
+            onSelect={(id) =>
+              setSelectedTripId(id === selectedTripId ? null : id)
+            }
           />
 
           {selectedTrip && (
@@ -163,8 +176,8 @@ export default function DispatchPage() {
 
           {conflictIds.size > 0 && (
             <div className="mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-              ⚠ Có {conflictIds.size} chuyến cùng xe cách nhau dưới 2h30 — xe
-              có thể không kịp quay đầu giữa 2 chuyến. Các khối viền đỏ trên
+              ⚠ Có {conflictIds.size} chuyến cùng xe cách nhau dưới 2h30 — xe có
+              thể không kịp quay đầu giữa 2 chuyến. Các khối viền đỏ trên
               timeline.
             </div>
           )}

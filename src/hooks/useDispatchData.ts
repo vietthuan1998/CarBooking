@@ -193,6 +193,7 @@ export function useDispatchData(selectedDate: string) {
   // ---- CRUD trực tiếp: cập nhật trạng thái trip (đơn giản, không cần edge function) ----
   const updateTripStatus = useCallback(
     async (tripId: string, trip_status: TripStatus) => {
+      console.log(tripId, trip_status);
       const { error: err } = await supabase
         .from("trips")
         .update({ trip_status })
@@ -210,7 +211,14 @@ export function useDispatchData(selectedDate: string) {
         .from("trips")
         .delete()
         .eq("id", tripId);
-      if (err) throw err;
+      if (err) {
+        if (err.code === "23503") {
+          throw new Error(
+            "Không thể xóa chuyến này vì đã có khách đặt vé. Hãy hủy chuyến thay vì xóa.",
+          );
+        }
+        throw err;
+      }
       loadAll(selectedDate);
     },
     [loadAll, selectedDate],

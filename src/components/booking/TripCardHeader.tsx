@@ -19,18 +19,18 @@ export function TripCardHeader({ trip }: Props) {
   return (
     <div className="flex items-start justify-between px-4 pt-4 pb-3">
       <div>
-        <p className="text-xs font-mono text-gray-400">{trip.trip_code}</p>
-        <p className="text-sm font-semibold text-gray-800 mt-0.5">
+        <p className="text-sm font-semibold text-gray-800">
+          🚗 {trip.vehicle.vehicle_name}
+          <span className="ml-1.5 text-xs text-gray-500 font-normal">
+            {trip.vehicle.plate_number}
+          </span>
+        </p>
+        <p className="text-xs text-gray-500 mt-1">
           {formatTime(trip.planned_departure_time)}
-          <span className="ml-1.5 text-xs text-gray-400 font-normal">
+          <span className="ml-1.5 text-gray-400">
             {formatDate(trip.planned_departure_time)}
           </span>
         </p>
-        <div className="flex items-center gap-2 text-xs text-gray-500 mt-1">
-          <span>🚗 {trip.vehicle.vehicle_name}</span>
-          <span className="text-gray-300">·</span>
-          <span>{trip.vehicle.plate_number}</span>
-        </div>
       </div>
       <span
         className={`text-xs px-2 py-0.5 rounded-full font-medium ${
