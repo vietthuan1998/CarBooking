@@ -24,10 +24,16 @@ import { validateBookingRequest } from "./lib/validate.ts";
 import { resolveCustomerId } from "./lib/customer.ts";
 import { assertTripBookable, getAvailableTripSeats } from "./lib/trip.ts";
 import { resolveBookingRoute } from "./lib/route.ts";
-import { insertBooking, logBookingCreated, markSeatsBooked } from "./lib/booking.ts";
+import {
+  insertBooking,
+  logBookingCreated,
+  markSeatsBooked,
+} from "./lib/booking.ts";
 
 Deno.serve(async (req: Request) => {
-  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+  if (req.method === "OPTIONS") {
+    return new Response("ok", { headers: corsHeaders });
+  }
   if (req.method !== "POST") return json({ error: "Method not allowed" }, 405);
 
   try {
@@ -38,24 +44,37 @@ Deno.serve(async (req: Request) => {
 
     const body = await req.json().catch(() => null);
     if (!body) return json({ error: "Request body không hợp lệ" }, 400);
-
     const request = validateBookingRequest(body);
 
     const customerId = await resolveCustomerId(supabase, request);
 
     const trip = await assertTripBookable(supabase, request.trip_id);
-    const tripSeats = await getAvailableTripSeats(supabase, request.trip_id, request.seat_ids);
+    const tripSeats = await getAvailableTripSeats(
+      supabase,
+      request.trip_id,
+      request.seat_ids,
+    );
     const route = await resolveBookingRoute(supabase, request.route_id, trip);
 
     const fareAmount = Number(route.base_price) * request.seat_ids.length;
-    const booking = await insertBooking(supabase, request, customerId, fareAmount);
+    const booking = await insertBooking(
+      supabase,
+      request,
+      customerId,
+      fareAmount,
+    );
 
     await markSeatsBooked(supabase, tripSeats.map((ts) => ts.id), booking.id);
     await logBookingCreated(supabase, booking.id);
 
     return json({ booking }, 201);
   } catch (err) {
-    if (err instanceof HttpError) return json({ error: err.message }, err.status);
-    return json({ error: err instanceof Error ? err.message : "Unknown error" }, 500);
+    if (err instanceof HttpError) {
+      return json({ error: err.message }, err.status);
+    }
+    return json(
+      { error: err instanceof Error ? err.message : "Unknown error" },
+      500,
+    );
   }
 });

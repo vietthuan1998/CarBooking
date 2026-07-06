@@ -67,12 +67,26 @@ export interface TripSeatRow {
   status: "available" | "locked" | "booked";
   booking_id: string | null;
   seat: { id: string; seat_code: string; seat_order: number } | null;
+  booking: {
+    id: string;
+    booking_code: string;
+    pickup_address: string;
+    dropoff_address: string;
+    status: string;
+    customer: { full_name: string; phone: string } | null;
+  } | null;
 }
 
 export async function getTripSeatsWithBookings(tripId: string): Promise<TripSeatRow[]> {
   const { data, error } = await supabase
     .from("trip_seats")
-    .select("id, seat_id, status, booking_id, seat:seats(id, seat_code, seat_order)")
+    .select(`
+      id, seat_id, status, booking_id,
+      seat:seats(id, seat_code, seat_order),
+      booking:bookings(id, booking_code, pickup_address, dropoff_address, status,
+        customer:customers(full_name, phone)
+      )
+    `)
     .eq("trip_id", tripId)
     .order("seat_id");
 

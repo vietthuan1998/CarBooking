@@ -39,7 +39,7 @@ export default function LoginPage() {
         return;
       }
 
-      if (profile.role !== "admin" && profile.role !== "dispatcher") {
+      if (profile.role !== "admin" && profile.role !== "staff") {
         setErrorMessage("Bạn không có quyền truy cập trang quản trị.");
         return;
       }

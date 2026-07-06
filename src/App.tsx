@@ -7,10 +7,11 @@ import { DashboardPage } from "./pages/admin/DashboardPage";
 import DispatchPage from "./pages/admin/DispatchPage";
 import DriversPage from "./pages/admin/DriversPage";
 import VehiclesPage from "./pages/admin/VehiclesPage";
-import Signup from "./pages/Signup";
+import Signup from "./pages/auth/Signup";
+import SignupPage from "./pages/admin/AccountPage";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 import NotFoundPage from "./pages/NotFoundPage";
-import BookingsPage from "./pages/booking/BookingsPage";
+import BookingsPage from "./pages/admin/BookingsPage";
 
 import PublicRoute from "./components/auth/PublicRoute";
 import ReportsPage from "./pages/admin/ReportsPage";
@@ -50,6 +51,7 @@ function AppContent() {
         <Route path="drivers" element={<DriversPage />} />
         <Route path="bookings" element={<BookingsPage />} />
         <Route path="reports" element={<ReportsPage />} />
+        <Route path="accounts" element={<SignupPage />} />
       </Route>
 
       {/* Catch all invalid routes */}

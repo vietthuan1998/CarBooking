@@ -28,12 +28,22 @@ export interface Trip {
   route: { route_name: string; origin: string; destination: string };
 }
 
+export interface SeatBookingInfo {
+  id: string;
+  booking_code: string;
+  pickup_address: string;
+  dropoff_address: string;
+  status: string;
+  customer: { full_name: string; phone: string } | null;
+}
+
 export interface TripSeat {
   id: string;
   seat_id: string;
   status: "available" | "locked" | "booked";
   booking_id: string | null;
   seat: Seat;
+  booking?: SeatBookingInfo | null;
 }
 
 export interface Customer {

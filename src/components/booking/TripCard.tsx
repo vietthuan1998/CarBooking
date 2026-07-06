@@ -59,6 +59,10 @@ export function TripCard({
   ).length;
   const showForm = isActive && selectedSeatOrders.length > 0;
 
+  // Chỉ chuyến 'scheduled' mới cho đặt vé — chuyến khác vẫn hiển thị ghế
+  // (giữ nguyên bộ lọc trạng thái) nhưng ghế bị disable, không bấm chọn được.
+  const isBookable = trip.trip_status === "scheduled";
+
   return (
     <div className="rounded-xl border border-gray-100 bg-white shadow-sm hover:shadow-md transition-shadow">
       <TripCardHeader trip={trip} />
@@ -77,6 +81,7 @@ export function TripCard({
             selectedSeatOrders={selectedSeatOrders}
             onSeatClick={handleSeatClick}
             onRemoveSeat={handleRemoveSeat}
+            disabled={!isBookable}
           />
         )}
       </div>
@@ -101,7 +106,13 @@ export function TripCard({
       {!seatsLoading && !showForm && (
         <div className="px-4 pb-3 text-center">
           <p className="text-xs text-gray-400">
-            {availableCount > 0
+            {!isBookable
+              ? trip.trip_status === "cancelled"
+                ? "Chuyến đã hủy — không thể đặt vé"
+                : trip.trip_status === "completed"
+                ? "Chuyến đã hoàn thành — không thể đặt vé"
+                : "Chuyến đang chạy — không thể đặt vé"
+              : availableCount > 0
               ? "Nhấn vào ghế để chọn và đặt vé"
               : "Không còn ghế trống"}
           </p>

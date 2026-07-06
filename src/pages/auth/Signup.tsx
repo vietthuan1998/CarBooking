@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuthStore } from "@/stores/authStore";
-import { signUp } from "../services/authService";
+import { signUp } from "../../services/authService";
 
 export default function Signup() {
   const navigate = useNavigate();

@@ -1,6 +1,11 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import axios from "axios";
-import type { BookingForm, Seat, Trip, TripSeat } from "@/features/booking/types";
+import type {
+  BookingForm,
+  Seat,
+  Trip,
+  TripSeat,
+} from "@/features/booking/types";
 import { edgeFunctionClient } from "@/utils/axiosClient";
 import { getTripSeatsWithBookings } from "@/services/bookingService";
 
@@ -29,7 +34,7 @@ export function useTripBooking({
   const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  const loadSeats = async () => {
+  const loadSeats = useCallback(async () => {
     const rows = await getTripSeatsWithBookings(trip.id);
     setTripSeats(rows as unknown as TripSeat[]);
     // Derive vehicle seats from joined trip_seats data (trigger đảm bảo đủ ghế)
@@ -42,7 +47,7 @@ export function useTripBooking({
       }))
       .sort((a, b) => a.seat_order - b.seat_order);
     setVehicleSeats(vSeats);
-  };
+  }, [trip.id]);
 
   useEffect(() => {
     let cancelled = false;
@@ -58,7 +63,7 @@ export function useTripBooking({
     return () => {
       cancelled = true;
     };
-  }, [trip.id]);
+  }, [trip.id, loadSeats]);
 
   const orderToSeatId = Object.fromEntries(
     vehicleSeats.map((s) => [s.seat_order, s.id]),

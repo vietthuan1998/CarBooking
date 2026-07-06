@@ -30,9 +30,9 @@ export function Seat({
   return (
     <g
       transform={`translate(${x}, ${y})`}
-      onClick={disabled || isDriver ? undefined : onClick}
+      onClick={isDriver ? undefined : onClick}
       style={{
-        cursor: disabled || isDriver ? "not-allowed" : "pointer",
+        cursor: isDriver ? "not-allowed" : onClick ? "pointer" : "default",
       }}
     >
       <rect
