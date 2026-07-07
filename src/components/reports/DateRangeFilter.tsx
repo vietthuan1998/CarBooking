@@ -40,6 +40,7 @@ export function DateRangeFilter({
         <div className="flex items-center gap-2 text-sm">
           <input
             type="date"
+            aria-label="Từ ngày"
             value={toInputValue(startDate)}
             onChange={(e) =>
               onStartDateChange(new Date(`${e.target.value}T00:00:00`))
@@ -49,6 +50,7 @@ export function DateRangeFilter({
           <span className="text-slate-400">—</span>
           <input
             type="date"
+            aria-label="Đến ngày"
             value={toInputValue(endDate)}
             onChange={(e) =>
               onEndDateChange(new Date(`${e.target.value}T00:00:00`))

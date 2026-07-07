@@ -25,7 +25,7 @@ export function UpcomingTripsCard({ trips }: Props) {
     <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
       <div className="mb-5 flex items-center justify-between gap-4">
         <h2 className="text-lg font-semibold text-slate-900">Chuyến sắp xuất phát</h2>
-        <button className="text-sm font-medium text-slate-500 transition hover:text-slate-700">
+        <button type="button" className="text-sm font-medium text-slate-500 transition hover:text-slate-700">
           Xem tất cả
         </button>
       </div>

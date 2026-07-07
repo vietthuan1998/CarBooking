@@ -89,6 +89,7 @@ export function RegisterPanel({
       <div className="flex flex-col p-3">
         <input
           type="search"
+          aria-label="Tìm xe theo tên hoặc biển số"
           placeholder="Tìm xe theo tên hoặc biển số…"
           value={search}
           onChange={(e) => setSearch(e.target.value)}

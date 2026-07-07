@@ -93,7 +93,7 @@ export async function getVehiclePerformance(
   const tripIds = trips.map((t) => t.id);
 
   let bookings: Array<{ trip_id: string; fare_amount: number | null }> = [];
-  let tripSeatCounts: Record<string, number> = {};
+  const tripSeatCounts: Record<string, number> = {};
   if (tripIds.length > 0) {
     const [bookingsRes, tripSeatsRes] = await Promise.all([
       supabase

@@ -106,7 +106,7 @@ export async function signOut(): Promise<{ error: Error | null }> {
 /**
  * Get current user session
  */
-export async function getCurrentUser() {
+async function getCurrentUser() {
   try {
     const {
       data: { user },
@@ -123,7 +123,7 @@ export async function getCurrentUser() {
 /**
  * Get user profile data
  */
-export async function getUserProfile(userId: string): Promise<Profile | null> {
+async function getUserProfile(userId: string): Promise<Profile | null> {
   try {
     const { data, error } = await supabase
       .from("profiles")
@@ -136,29 +136,6 @@ export async function getUserProfile(userId: string): Promise<Profile | null> {
   } catch (error) {
     console.error("Error fetching user profile:", error);
     return null;
-  }
-}
-
-/**
- * Update user profile
- */
-export async function updateUserProfile(
-  userId: string,
-  updates: {
-    full_name?: string;
-    phone?: string;
-  },
-) {
-  try {
-    const { error } = await supabase
-      .from("profiles")
-      .update(updates)
-      .eq("id", userId);
-
-    if (error) throw error;
-    return { error: null };
-  } catch (error) {
-    return { error: error as Error };
   }
 }
 

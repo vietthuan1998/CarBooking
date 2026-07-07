@@ -12,13 +12,15 @@ interface CarTopViewProps {
   onSeatClick?: (seatId: number) => void;
 }
 
+const NO_SEATS: number[] = [];
+
 export default function CarTopView({
   layout,
   width = 900,
   height = 450,
   seatSize = 50,
-  selectedSeats = [],
-  disabledSeats = [],
+  selectedSeats = NO_SEATS,
+  disabledSeats = NO_SEATS,
   onSeatClick,
 }: CarTopViewProps) {
   return (

@@ -1,1 +1,1 @@
-export type StatusFilter = "all" | "active" | "inactive";
+export type StatusFilter = "all" | "active" | "inactive" | "pending";

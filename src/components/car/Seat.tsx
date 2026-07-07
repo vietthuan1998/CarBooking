@@ -32,7 +32,16 @@ export function Seat({
       transform={`translate(${x}, ${y})`}
       onClick={isDriver ? undefined : onClick}
       style={{
-        cursor: isDriver ? "not-allowed" : onClick ? "pointer" : "default",
+        // Ghế đã đặt (disabled) vẫn phải bắt được click để xem thông tin đặt
+        // chỗ — chỉ đổi con trỏ chuột sang "not-allowed" để báo hiệu không thể
+        // CHỌN ghế này cho lượt đặt mới, không phải để chặn tương tác.
+        cursor: isDriver
+          ? "not-allowed"
+          : disabled
+          ? "not-allowed"
+          : onClick
+          ? "pointer"
+          : "default",
       }}
     >
       <rect

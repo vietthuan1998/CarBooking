@@ -1,5 +1,3 @@
-// src/features/dispatch/useDispatchData.js
-import { supabase } from "@/utils/supabase";
 import { useCallback, useEffect, useState, useTransition } from "react";
 import type {
   CreateTripInput,
@@ -9,8 +7,15 @@ import type {
   TripStatus,
   Vehicle,
 } from "@/features/dispatch/types";
-import { edgeFunctionClient } from "@/utils/axiosClient";
-import axios from "axios";
+import {
+  deleteTrip as deleteTripRequest,
+  getActiveDrivers,
+  getActiveRoutes,
+  getActiveVehicles,
+  getTripsByDate,
+  scheduleTrip,
+  updateTripStatus as updateTripStatusRequest,
+} from "@/services/dispatchService";
 
 export function useDispatchData(selectedDate: string) {
   const [routes, setRoutes] = useState<Route[]>([]);
@@ -20,100 +25,16 @@ export function useDispatchData(selectedDate: string) {
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
-  // ---- CRUD trực tiếp: routes (đơn giản, không cần edge function) ----
-  const fetchRoutes = useCallback(async () => {
-    const { data, error: err } = await supabase
-      .from("routes")
-      .select("id, route_name, origin, destination, base_price, status")
-      .eq("status", "active")
-      .order("route_name");
-    if (err) throw err;
-    return data ?? [];
-  }, []);
-
-  // ---- CRUD trực tiếp: vehicles ----
-  const fetchVehicles = useCallback(async () => {
-    const { data, error: err } = await supabase
-      .from("vehicles")
-      .select("id, vehicle_name, plate_number, seat_count, status")
-      .eq("status", "active")
-      .order("vehicle_name");
-    if (err) throw err;
-    return data ?? [];
-  }, []);
-
-  // ---- CRUD trực tiếp: drivers (profiles role = 'driver') ----
-  // TODO: chưa hiển thị trên UI, chuẩn bị sẵn dữ liệu cho lúc bật lại tính năng gán tài xế
-  const fetchDrivers = useCallback(async () => {
-    const { data, error: err } = await supabase
-      .from("profiles")
-      .select("id, full_name, phone, status")
-      .eq("role", "driver")
-      .eq("status", "active")
-      .order("full_name");
-    if (err) throw err;
-    return data ?? [];
-  }, []);
-
-  // ---- CRUD trực tiếp: đọc trips trong ngày (kèm route + vehicle) ----
-  const fetchTrips = useCallback(async (date: Date | string) => {
-    // Parse as local time (append T00:00:00 so "YYYY-MM-DD" isn't treated as UTC midnight)
-    const d = new Date(typeof date === "string" ? `${date}T00:00:00` : date);
-    // Build UTC boundaries for the local calendar day so Supabase (UTC timestamptz) is filtered correctly
-    const dayStart = new Date(
-      d.getFullYear(),
-      d.getMonth(),
-      d.getDate(),
-      0,
-      0,
-      0,
-      0,
-    ).toISOString();
-    const dayEnd = new Date(
-      d.getFullYear(),
-      d.getMonth(),
-      d.getDate(),
-      23,
-      59,
-      59,
-      999,
-    ).toISOString();
-
-    const { data, error: err } = await supabase
-      .from("trips")
-      .select(
-        `
-          id,
-          trip_code,
-          route_id,
-          vehicle_id,
-          driver_id,
-          planned_departure_time,
-          actual_departure_time,
-          actual_arrival_time,
-          trip_status,
-          routes:route_id ( id, route_name, origin, destination ),
-          vehicles:vehicle_id ( id, vehicle_name, plate_number, seat_count )
-        `,
-      )
-      .gte("planned_departure_time", dayStart)
-      .lte("planned_departure_time", dayEnd)
-      .order("planned_departure_time");
-
-    if (err) throw err;
-    return (data ?? []) as unknown as Trip[];
-  }, []);
-
   const loadAll = useCallback((date: Date | string) => {
     startTransition(async () => {
       setError(null);
       try {
         const [routesData, vehiclesData, driversData, tripsData] = await Promise
           .all([
-            fetchRoutes(),
-            fetchVehicles(),
-            fetchDrivers(),
-            fetchTrips(date),
+            getActiveRoutes(),
+            getActiveVehicles(),
+            getActiveDrivers(),
+            getTripsByDate(date),
           ]);
         setRoutes(routesData);
         setVehicles(vehiclesData);
@@ -123,52 +44,20 @@ export function useDispatchData(selectedDate: string) {
         setError(e instanceof Error ? e.message : "Đã có lỗi xảy ra");
       }
     });
-  }, [fetchRoutes, fetchVehicles, fetchDrivers, fetchTrips]);
+  }, []);
 
   useEffect(() => {
     loadAll(selectedDate);
   }, [selectedDate, loadAll]);
 
-  // ---- Gọi Edge Function tạo 1 trip (có check trùng lịch xe ở server) ----
-  const scheduleTripRequest = useCallback(
-    async (
-      { route_id, vehicle_id, planned_departure_time, trip_code }:
-        CreateTripInput,
-    ) => {
-      const { data } = await edgeFunctionClient.post<{ trip: Trip }>(
-        "/schedule-trip",
-        {
-          route_id,
-          vehicle_id,
-          planned_departure_time,
-          trip_code,
-          // driver_id, // TODO: bật lại khi có chức năng gán tài xế
-        },
-      );
-      return data.trip;
-    },
-    [],
-  );
-
-  const scheduleTripErrorMessage = (err: unknown): string =>
-    axios.isAxiosError(err)
-      ? (err.response?.data?.error ?? err.message)
-      : err instanceof Error
-      ? err.message
-      : "Không thể tạo chuyến xe";
-
-  // ---- Tạo 1 trip mới ----
+  // ---- Tạo 1 trip mới (scheduleTrip đã ném Error với message tiếng Việt) ----
   const createTrip = useCallback(
     async (input: CreateTripInput) => {
-      try {
-        const trip = await scheduleTripRequest(input);
-        loadAll(selectedDate);
-        return trip;
-      } catch (err: unknown) {
-        throw new Error(scheduleTripErrorMessage(err), { cause: err });
-      }
+      const trip = await scheduleTrip(input);
+      loadAll(selectedDate);
+      return trip;
     },
-    [scheduleTripRequest, loadAll, selectedDate],
+    [loadAll, selectedDate],
   );
 
   // ---- Đăng ký hàng loạt: tạo nhiều trip cùng lúc (VD: nhiều xe cho 1 chiều),
@@ -179,46 +68,33 @@ export function useDispatchData(selectedDate: string) {
       const failures: { input: CreateTripInput; error: string }[] = [];
       for (const input of inputs) {
         try {
-          await scheduleTripRequest(input);
+          await scheduleTrip(input);
         } catch (err: unknown) {
-          failures.push({ input, error: scheduleTripErrorMessage(err) });
+          failures.push({
+            input,
+            error: err instanceof Error
+              ? err.message
+              : "Không thể tạo chuyến xe",
+          });
         }
       }
       loadAll(selectedDate);
       return failures;
     },
-    [scheduleTripRequest, loadAll, selectedDate],
+    [loadAll, selectedDate],
   );
 
-  // ---- CRUD trực tiếp: cập nhật trạng thái trip (đơn giản, không cần edge function) ----
   const updateTripStatus = useCallback(
     async (tripId: string, trip_status: TripStatus) => {
-      console.log(tripId, trip_status);
-      const { error: err } = await supabase
-        .from("trips")
-        .update({ trip_status })
-        .eq("id", tripId);
-      if (err) throw err;
+      await updateTripStatusRequest(tripId, trip_status);
       loadAll(selectedDate);
     },
     [loadAll, selectedDate],
   );
 
-  // ---- CRUD trực tiếp: xóa trip (đơn giản, không cần edge function) ----
   const deleteTrip = useCallback(
     async (tripId: string) => {
-      const { error: err } = await supabase
-        .from("trips")
-        .delete()
-        .eq("id", tripId);
-      if (err) {
-        if (err.code === "23503") {
-          throw new Error(
-            "Không thể xóa chuyến này vì đã có khách đặt vé. Hãy hủy chuyến thay vì xóa.",
-          );
-        }
-        throw err;
-      }
+      await deleteTripRequest(tripId);
       loadAll(selectedDate);
     },
     [loadAll, selectedDate],

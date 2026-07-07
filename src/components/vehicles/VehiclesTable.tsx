@@ -1,4 +1,13 @@
-import { Car, CheckCircle2, Pencil, Trash2, XCircle } from "lucide-react";
+import {
+  Car,
+  CheckCircle2,
+  Clock,
+  Pencil,
+  Power,
+  PowerOff,
+  Trash2,
+  XCircle,
+} from "lucide-react";
 import type { Vehicle } from "../../services/vehicleService";
 
 interface Props {
@@ -10,6 +19,8 @@ interface Props {
   onEdit: (v: Vehicle) => void;
   onDeleteRequest: (v: Vehicle) => void;
   onToggleStatus: (v: Vehicle) => void;
+  onApprove: (v: Vehicle) => void;
+  onReject: (v: Vehicle) => void;
 }
 
 export function VehiclesTable({
@@ -21,6 +32,8 @@ export function VehiclesTable({
   onEdit,
   onDeleteRequest,
   onToggleStatus,
+  onApprove,
+  onReject,
 }: Props) {
   return (
     <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">
@@ -62,6 +75,9 @@ export function VehiclesTable({
                 <th className="px-4 py-3 text-left font-medium text-slate-500">
                   Biển số
                 </th>
+                <th className="px-4 py-3 text-left font-medium text-slate-500">
+                  Tài xế đăng ký
+                </th>
                 <th className="px-4 py-3 text-center font-medium text-slate-500">
                   Số chỗ
                 </th>
@@ -86,36 +102,64 @@ export function VehiclesTable({
                   <td className="px-4 py-3.5 font-mono text-slate-700">
                     {v.plate_number}
                   </td>
+                  <td className="px-4 py-3.5 text-slate-600">
+                    {v.driver ? (
+                      <div>
+                        <div className="font-medium text-slate-800">
+                          {v.driver.full_name}
+                        </div>
+                        {v.driver.phone && (
+                          <div className="text-xs text-slate-400">
+                            {v.driver.phone}
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <span className="text-slate-300">—</span>
+                    )}
+                  </td>
                   <td className="px-4 py-3.5 text-center">
                     <span className="inline-flex h-6 w-8 items-center justify-center rounded-full bg-slate-100 text-xs font-semibold text-slate-700">
                       {v.seat_count}
                     </span>
                   </td>
                   <td className="px-4 py-3.5 text-center">
-                    <button
-                      type="button"
-                      onClick={() => onToggleStatus(v)}
-                      title="Nhấn để đổi trạng thái"
-                      className={[
-                        "inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium transition-colors",
-                        v.status === "active"
-                          ? "bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
-                          : "bg-slate-100 text-slate-500 hover:bg-slate-200",
-                      ].join(" ")}
-                    >
-                      {v.status === "active" ? (
-                        <>
-                          <CheckCircle2 size={12} /> Hoạt động
-                        </>
-                      ) : (
-                        <>
-                          <XCircle size={12} /> Ngưng
-                        </>
-                      )}
-                    </button>
+                    {v.status === "pending" ? (
+                      <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-2.5 py-1 text-xs font-medium text-amber-700">
+                        <Clock size={12} /> Chờ duyệt
+                      </span>
+                    ) : v.status === "active" ? (
+                      <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700">
+                        <CheckCircle2 size={12} /> Hoạt động
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-500">
+                        <XCircle size={12} /> Ngưng
+                      </span>
+                    )}
                   </td>
                   <td className="px-4 py-3.5">
                     <div className="flex items-center justify-end gap-1">
+                      {v.status === "pending" && (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => onApprove(v)}
+                            title="Duyệt xe"
+                            className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-emerald-600 transition-colors hover:bg-emerald-50"
+                          >
+                            <CheckCircle2 size={15} />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => onReject(v)}
+                            title="Từ chối xe"
+                            className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-red-500 transition-colors hover:bg-red-50"
+                          >
+                            <XCircle size={15} />
+                          </button>
+                        </>
+                      )}
                       <button
                         type="button"
                         onClick={() => onEdit(v)}
@@ -124,6 +168,29 @@ export function VehiclesTable({
                       >
                         <Pencil size={15} />
                       </button>
+                      {v.status !== "pending" && (
+                        <button
+                          type="button"
+                          onClick={() => onToggleStatus(v)}
+                          title={
+                            v.status === "active"
+                              ? "Ngưng hoạt động"
+                              : "Kích hoạt lại"
+                          }
+                          className={[
+                            "inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 transition-colors",
+                            v.status === "active"
+                              ? "hover:bg-red-50 hover:text-red-600"
+                              : "hover:bg-emerald-50 hover:text-emerald-600",
+                          ].join(" ")}
+                        >
+                          {v.status === "active" ? (
+                            <PowerOff size={15} />
+                          ) : (
+                            <Power size={15} />
+                          )}
+                        </button>
+                      )}
                       <button
                         type="button"
                         onClick={() => onDeleteRequest(v)}

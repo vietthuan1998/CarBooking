@@ -56,6 +56,7 @@ export function BookingsHeader({
         {/* Date picker */}
         <input
           type="date"
+          aria-label="Chọn ngày"
           value={selectedDate}
           onChange={(e) => onDateChange(e.target.value)}
           className="rounded-lg border border-gray-200 px-3 py-1.5 text-sm focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-100"

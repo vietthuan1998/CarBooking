@@ -1,4 +1,11 @@
-import { CheckCircle2, Pencil, UserRound, XCircle } from "lucide-react";
+import {
+  CheckCircle2,
+  Pencil,
+  Power,
+  PowerOff,
+  UserRound,
+  XCircle,
+} from "lucide-react";
 import type { Profile } from "../../services/accountService";
 
 const ROLE_BADGE: Record<Profile["role"], string> = {
@@ -111,25 +118,12 @@ export function AccountsTable({
                       </span>
                     </td>
                     <td className="px-4 py-3.5 text-center">
-                      <button
-                        type="button"
-                        disabled={!toggleable}
-                        onClick={() => onToggleStatus(p)}
-                        title={
-                          toggleable
-                            ? "Nhấn để đổi trạng thái"
-                            : isSelf
-                              ? "Không thể tự đổi trạng thái của chính mình"
-                              : "Bạn không có quyền đổi trạng thái tài khoản này"
-                        }
+                      <span
                         className={[
-                          "inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium transition-colors",
+                          "inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium",
                           p.status === "active"
                             ? "bg-emerald-50 text-emerald-700"
                             : "bg-slate-100 text-slate-500",
-                          toggleable
-                            ? "hover:opacity-80"
-                            : "cursor-not-allowed opacity-60",
                         ].join(" ")}
                       >
                         {p.status === "active" ? (
@@ -141,7 +135,7 @@ export function AccountsTable({
                             <XCircle size={12} /> Vô hiệu hóa
                           </>
                         )}
-                      </button>
+                      </span>
                     </td>
                     <td className="px-4 py-3.5">
                       <div className="flex items-center justify-end gap-1">
@@ -153,6 +147,29 @@ export function AccountsTable({
                             className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 transition-colors hover:bg-blue-50 hover:text-blue-600"
                           >
                             <Pencil size={15} />
+                          </button>
+                        )}
+                        {toggleable && (
+                          <button
+                            type="button"
+                            onClick={() => onToggleStatus(p)}
+                            title={
+                              p.status === "active"
+                                ? "Vô hiệu hóa tài khoản"
+                                : "Kích hoạt tài khoản"
+                            }
+                            className={[
+                              "inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 transition-colors",
+                              p.status === "active"
+                                ? "hover:bg-red-50 hover:text-red-600"
+                                : "hover:bg-emerald-50 hover:text-emerald-600",
+                            ].join(" ")}
+                          >
+                            {p.status === "active" ? (
+                              <PowerOff size={15} />
+                            ) : (
+                              <Power size={15} />
+                            )}
                           </button>
                         )}
                       </div>

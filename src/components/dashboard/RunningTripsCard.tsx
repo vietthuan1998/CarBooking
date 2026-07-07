@@ -12,7 +12,7 @@ export function RunningTripsCard({ trips }: Props) {
       <div className="mb-4 flex items-center justify-between">
         <h2 className="text-lg font-bold text-slate-900">Chuyến đang chạy</h2>
 
-        <button className="text-sm font-semibold text-slate-500 transition hover:text-blue-600">
+        <button type="button" className="text-sm font-semibold text-slate-500 transition hover:text-blue-600">
           Xem tất cả
         </button>
       </div>

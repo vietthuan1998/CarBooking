@@ -34,6 +34,7 @@ export interface SeatBookingInfo {
   pickup_address: string;
   dropoff_address: string;
   status: string;
+  fare_amount: number;
   customer: { full_name: string; phone: string } | null;
 }
 

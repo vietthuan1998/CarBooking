@@ -39,10 +39,14 @@ export function AccountFormModal({
         </div>
         <div className="space-y-4 p-6">
           <div>
-            <label className="mb-1.5 block text-sm font-medium text-slate-700">
+            <label
+              htmlFor="account-full-name"
+              className="mb-1.5 block text-sm font-medium text-slate-700"
+            >
               Họ và tên <span className="text-red-500">*</span>
             </label>
             <input
+              id="account-full-name"
               type="text"
               placeholder="VD: Nguyễn Văn A"
               value={form.full_name}
@@ -53,10 +57,14 @@ export function AccountFormModal({
             />
           </div>
           <div>
-            <label className="mb-1.5 block text-sm font-medium text-slate-700">
+            <label
+              htmlFor="account-phone"
+              className="mb-1.5 block text-sm font-medium text-slate-700"
+            >
               Số điện thoại
             </label>
             <input
+              id="account-phone"
               type="text"
               placeholder="VD: 0901234567"
               value={form.phone}
@@ -70,10 +78,14 @@ export function AccountFormModal({
           {mode === "add" && (
             <>
               <div>
-                <label className="mb-1.5 block text-sm font-medium text-slate-700">
+                <label
+                  htmlFor="account-email"
+                  className="mb-1.5 block text-sm font-medium text-slate-700"
+                >
                   Email <span className="text-red-500">*</span>
                 </label>
                 <input
+                  id="account-email"
                   type="email"
                   placeholder="VD: staff@example.com"
                   value={form.email}
@@ -84,10 +96,14 @@ export function AccountFormModal({
                 />
               </div>
               <div>
-                <label className="mb-1.5 block text-sm font-medium text-slate-700">
+                <label
+                  htmlFor="account-password"
+                  className="mb-1.5 block text-sm font-medium text-slate-700"
+                >
                   Mật khẩu <span className="text-red-500">*</span>
                 </label>
                 <input
+                  id="account-password"
                   type="password"
                   placeholder="Ít nhất 6 ký tự"
                   value={form.password}
@@ -101,10 +117,14 @@ export function AccountFormModal({
           )}
 
           <div>
-            <label className="mb-1.5 block text-sm font-medium text-slate-700">
+            <label
+              htmlFor="account-role"
+              className="mb-1.5 block text-sm font-medium text-slate-700"
+            >
               Vai trò
             </label>
             <select
+              id="account-role"
               value={form.role}
               disabled={!canEditRole}
               onChange={(e) =>

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { supabase } from "@/utils/supabase";
+import { getActiveRoutes, getTripsByDate } from "@/services/bookingService";
 import type { Route, Trip } from "@/features/booking/types";
 
 export type Direction = "hue_to_dest" | "dest_to_hue";
@@ -11,7 +11,7 @@ export type TripStatus =
   | "completed"
   | "cancelled";
 
-export function todayInputValue(): string {
+function todayInputValue(): string {
   const d = new Date();
   const yyyy = d.getFullYear();
   const mm = String(d.getMonth() + 1).padStart(2, "0");
@@ -27,7 +27,7 @@ type FetchedData = {
 export function useBookingsData() {
   const [fetchedData, setFetchedData] = useState<FetchedData | null>(null);
   const [routes, setRoutes] = useState<Route[]>([]);
-  const [selectedDate, setSelectedDate] = useState<string>(todayInputValue());
+  const [selectedDate, setSelectedDate] = useState<string>(todayInputValue);
   const [statusFilter, setStatusFilter] = useState<TripStatus>("all");
   const [refreshKey, setRefreshKey] = useState(0);
 
@@ -35,17 +35,12 @@ export function useBookingsData() {
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      const { data, error } = await supabase
-        .from("routes")
-        .select("id, route_name, origin, destination, base_price")
-        .eq("status", "active")
-        .order("route_name");
-      if (cancelled) return;
-      if (error) {
-        console.error(error);
-        return;
+      try {
+        const data = await getActiveRoutes();
+        if (!cancelled) setRoutes(data);
+      } catch (err) {
+        console.error(err);
       }
-      setRoutes((data ?? []) as unknown as Route[]);
     })();
     return () => {
       cancelled = true;
@@ -61,52 +56,13 @@ export function useBookingsData() {
     let cancelled = false;
     const key = `${selectedDate}|${statusFilter}|${refreshKey}`;
 
-    async function load() {
+    (async () => {
       try {
-        // Build local-time day boundaries → UTC for Supabase timestamptz
-        const d = new Date(`${selectedDate}T00:00:00`);
-        const dayStart = new Date(
-          d.getFullYear(),
-          d.getMonth(),
-          d.getDate(),
-          0,
-          0,
-          0,
-          0,
-        ).toISOString();
-        const dayEnd = new Date(
-          d.getFullYear(),
-          d.getMonth(),
-          d.getDate(),
-          23,
-          59,
-          59,
-          999,
-        ).toISOString();
-
-        let query = supabase
-          .from("trips")
-          .select(
-            `id, trip_code, planned_departure_time, trip_status,
-           vehicle:vehicles(id, plate_number, vehicle_name, seat_count),
-           route:routes(route_name, origin, destination)`,
-          )
-          .gte("planned_departure_time", dayStart)
-          .lte("planned_departure_time", dayEnd)
-          .order("planned_departure_time");
-
-        if (statusFilter !== "all") {
-          query = query.eq("trip_status", statusFilter);
-        }
-
-        const { data, error } = await query;
+        const all = await getTripsByDate(
+          selectedDate,
+          statusFilter === "all" ? undefined : statusFilter,
+        );
         if (cancelled) return;
-        if (error) {
-          console.error(error);
-          return;
-        }
-
-        const all = (data ?? []) as unknown as Trip[];
         setFetchedData({
           trips: {
             hue_to_dest: all.filter((t) => t.route.origin === "Huế"),
@@ -117,9 +73,7 @@ export function useBookingsData() {
       } catch (err) {
         console.error(err);
       }
-    }
-
-    void load();
+    })();
     return () => {
       cancelled = true;
     };
