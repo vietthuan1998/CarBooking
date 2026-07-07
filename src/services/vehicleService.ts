@@ -1,11 +1,15 @@
 import { supabase } from "../utils/supabase";
 
+export type VehicleStatus = "active" | "inactive" | "maintenance" | "pending";
+
 export interface Vehicle {
   id: string;
   vehicle_name: string;
   plate_number: string;
   seat_count: number;
-  status: "active" | "inactive";
+  status: VehicleStatus;
+  driver_id: string | null;
+  driver: { full_name: string; phone: string | null } | null;
   created_at: string;
 }
 
@@ -13,16 +17,18 @@ export interface VehicleFormInput {
   vehicle_name: string;
   plate_number: string;
   seat_count: number;
-  status: "active" | "inactive";
+  status: VehicleStatus;
 }
 
 export async function getVehicles(): Promise<Vehicle[]> {
   const { data, error } = await supabase
     .from("vehicles")
-    .select("id, vehicle_name, plate_number, seat_count, status, created_at")
+    .select(
+      "id, vehicle_name, plate_number, seat_count, status, driver_id, driver:profiles(full_name, phone), created_at",
+    )
     .order("vehicle_name");
   if (error) throw error;
-  return data ?? [];
+  return (data ?? []) as unknown as Vehicle[];
 }
 
 export async function createVehicle(input: VehicleFormInput): Promise<Vehicle> {

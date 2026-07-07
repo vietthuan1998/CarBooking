@@ -30,12 +30,14 @@ export function BookingFormFields({
       <div className="space-y-2">
         <p className="text-sm font-medium text-gray-700">Địa điểm</p>
         <input
+          aria-label={`Địa chỉ đón (tại ${origin})`}
           placeholder={`Địa chỉ đón (tại ${origin}) *`}
           value={form.pickup_address}
           onChange={(e) => onChange({ pickup_address: e.target.value })}
           className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
         />
         <input
+          aria-label={`Địa chỉ trả (tại ${destination})`}
           placeholder={`Địa chỉ trả (tại ${destination}) *`}
           value={form.dropoff_address}
           onChange={(e) => onChange({ dropoff_address: e.target.value })}
@@ -47,6 +49,7 @@ export function BookingFormFields({
       <div>
         <p className="text-sm font-medium text-gray-700 mb-2">Tuyến đi</p>
         <select
+          aria-label="Tuyến đi"
           value={form.route_id}
           onChange={(e) => onChange({ route_id: e.target.value })}
           className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"

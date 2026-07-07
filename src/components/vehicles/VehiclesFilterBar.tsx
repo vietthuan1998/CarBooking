@@ -1,10 +1,11 @@
 import { Search } from "lucide-react";
 import type { StatusFilter } from "../../features/vehicles/types";
 
-const FILTERS: StatusFilter[] = ["all", "active", "inactive"];
+const FILTERS: StatusFilter[] = ["all", "pending", "active", "inactive"];
 
 const FILTER_LABEL: Record<StatusFilter, string> = {
   all: "Tất cả",
+  pending: "Chờ duyệt",
   active: "Hoạt động",
   inactive: "Ngưng",
 };
@@ -61,6 +62,7 @@ export function VehiclesFilterBar({
         />
         <input
           type="text"
+          aria-label="Tìm tên xe, biển số"
           placeholder="Tìm tên xe, biển số..."
           value={search}
           onChange={(e) => onSearchChange(e.target.value)}

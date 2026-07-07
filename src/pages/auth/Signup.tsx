@@ -55,10 +55,14 @@ export default function Signup() {
 
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
-          <label className="block text-sm font-medium text-gray-700">
+          <label
+            htmlFor="signup-full-name"
+            className="block text-sm font-medium text-gray-700"
+          >
             Họ và tên
           </label>
           <input
+            id="signup-full-name"
             value={fullName}
             onChange={(e) => setFullName(e.target.value)}
             className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500"
@@ -67,10 +71,14 @@ export default function Signup() {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700">
+          <label
+            htmlFor="signup-phone"
+            className="block text-sm font-medium text-gray-700"
+          >
             Số điện thoại
           </label>
           <input
+            id="signup-phone"
             value={phone}
             onChange={(e) => setPhone(e.target.value)}
             className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500"
@@ -78,10 +86,14 @@ export default function Signup() {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700">
+          <label
+            htmlFor="signup-email"
+            className="block text-sm font-medium text-gray-700"
+          >
             Email
           </label>
           <input
+            id="signup-email"
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
@@ -91,10 +103,14 @@ export default function Signup() {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700">
+          <label
+            htmlFor="signup-password"
+            className="block text-sm font-medium text-gray-700"
+          >
             Mật khẩu
           </label>
           <input
+            id="signup-password"
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}

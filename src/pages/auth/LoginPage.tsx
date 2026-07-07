@@ -110,11 +110,15 @@ export default function LoginPage() {
 
           <form onSubmit={handleSubmit} className="space-y-5">
             <div>
-              <label className="mb-2 block text-sm font-bold text-gray-700">
+              <label
+                htmlFor="login-email"
+                className="mb-2 block text-sm font-bold text-gray-700"
+              >
                 Email
               </label>
 
               <input
+                id="login-email"
                 type="email"
                 value={email}
                 onChange={(event) => setEmail(event.target.value)}
@@ -125,11 +129,15 @@ export default function LoginPage() {
             </div>
 
             <div>
-              <label className="mb-2 block text-sm font-bold text-gray-700">
+              <label
+                htmlFor="login-password"
+                className="mb-2 block text-sm font-bold text-gray-700"
+              >
                 Mật khẩu
               </label>
 
               <input
+                id="login-password"
                 type="password"
                 value={password}
                 onChange={(event) => setPassword(event.target.value)}

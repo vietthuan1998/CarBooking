@@ -1,8 +1,7 @@
-import { useState } from "react";
 import CarTopView from "../car/CarTopView";
 import { fourSeatLayout, sevenSeatLayout } from "../car/SeatLayout";
 import { Legend } from "./Legend";
-import type { Seat, TripSeat } from "@/features/booking/types";
+import type { Seat, SeatBookingInfo, TripSeat } from "@/features/booking/types";
 
 interface Props {
   seats: Seat[];
@@ -11,6 +10,7 @@ interface Props {
   selectedSeatOrders: number[];
   onSeatClick: (seatOrder: number) => void;
   onRemoveSeat: (seatOrder: number) => void;
+  onViewBooking: (seats: Seat[], booking: SeatBookingInfo) => void;
   disabled?: boolean;
 }
 
@@ -21,10 +21,10 @@ export function SeatPicker({
   selectedSeatOrders,
   onSeatClick,
   onRemoveSeat,
+  onViewBooking,
   disabled = false,
 }: Props) {
   const layout = seatCount > 5 ? sevenSeatLayout : fourSeatLayout;
-  const [openOrder, setOpenOrder] = useState<number | null>(null);
 
   const bookedOrders = disabled
     ? seats.map((s) => s.seat_order)
@@ -35,22 +35,29 @@ export function SeatPicker({
 
   // Chỉ ghế thực sự có booking mới xem được thông tin — ghế bị disable
   // do chuyến không cho đặt (nhưng chưa ai đặt) thì không có gì để hiện.
-  const bookingByOrder = new Map(
+  const bookingByOrder = new Map<number, SeatBookingInfo>(
     tripSeats
       .filter((ts) => ts.status !== "available" && ts.booking)
-      .map((ts) => [
-        seats.find((s) => s.id === ts.seat_id)?.seat_order ?? -1,
-        ts.booking!,
-      ])
+      .map(
+        (ts): [number, SeatBookingInfo] => [
+          seats.find((s) => s.id === ts.seat_id)?.seat_order ?? -1,
+          ts.booking!,
+        ],
+      )
       .filter(([order]) => order !== -1),
   );
 
-  const openBooking = openOrder !== null ? bookingByOrder.get(openOrder) : undefined;
-  const openSeat = seats.find((s) => s.seat_order === openOrder);
-
   const handleSeatClick = (order: number) => {
-    if (bookingByOrder.has(order)) {
-      setOpenOrder((prev) => (prev === order ? null : order));
+    const booking = bookingByOrder.get(order);
+    if (booking) {
+      // 1 khách có thể đặt nhiều ghế trong cùng 1 booking — gom hết các ghế
+      // chung booking_id lại để hiển thị đầy đủ (không chỉ riêng ghế vừa bấm).
+      const seatsInBooking = tripSeats
+        .filter((ts) => ts.booking?.id === booking.id)
+        .map((ts) => seats.find((s) => s.id === ts.seat_id))
+        .filter((s): s is Seat => Boolean(s))
+        .sort((a, b) => a.seat_order - b.seat_order);
+      if (seatsInBooking.length > 0) onViewBooking(seatsInBooking, booking);
       return;
     }
     if (!disabled) onSeatClick(order);
@@ -69,56 +76,28 @@ export function SeatPicker({
         </span>
       </div>
 
-      <div className="relative">
-        <div
-          className={`rounded-xl border border-gray-100 bg-gray-50 p-2 flex justify-center ${
-            disabled ? "opacity-50" : ""
-          }`}
-        >
-          <CarTopView
-            layout={layout}
-            width={260}
-            height={140}
-            seatSize={80}
-            selectedSeats={selectedSeatOrders}
-            disabledSeats={bookedOrders}
-            onSeatClick={handleSeatClick}
-          />
-        </div>
-
-        {openBooking && (
-          <div className="absolute inset-x-2 top-2 z-20 bg-white border border-gray-200 rounded-lg shadow-lg p-3 text-sm">
-            <div className="flex items-start justify-between gap-2">
-              <div>
-                <p className="font-medium text-gray-800">
-                  Ghế {openSeat?.seat_code} · {openBooking.customer?.full_name ?? "—"}
-                </p>
-                {openBooking.customer?.phone && (
-                  <a
-                    href={`tel:${openBooking.customer.phone}`}
-                    className="text-blue-600 hover:underline"
-                  >
-                    {openBooking.customer.phone}
-                  </a>
-                )}
-              </div>
-              <button
-                onClick={() => setOpenOrder(null)}
-                className="text-gray-400 hover:text-gray-700"
-              >
-                ✕
-              </button>
-            </div>
-            <div className="mt-1.5 text-gray-500 text-xs space-y-0.5">
-              <p>Đón: {openBooking.pickup_address}</p>
-              <p>Trả: {openBooking.dropoff_address}</p>
-              <p>Mã vé: {openBooking.booking_code}</p>
-            </div>
-          </div>
-        )}
+      <div
+        className={`rounded-xl border border-gray-100 bg-gray-50 p-2 flex justify-center ${
+          disabled ? "opacity-50" : ""
+        }`}
+      >
+        <CarTopView
+          layout={layout}
+          width={260}
+          height={140}
+          seatSize={80}
+          selectedSeats={selectedSeatOrders}
+          disabledSeats={bookedOrders}
+          onSeatClick={handleSeatClick}
+        />
       </div>
 
       <Legend />
+      {bookingByOrder.size > 0 && (
+        <p className="mt-1 text-[11px] text-gray-400">
+          Bấm vào ghế đã đặt (màu xám) để xem thông tin đặt ghế
+        </p>
+      )}
 
       {selectedSeatOrders.length > 0 && (
         <div className="mt-3 flex flex-wrap gap-1.5">
@@ -131,6 +110,8 @@ export function SeatPicker({
               >
                 Ghế {seat?.seat_code ?? o}
                 <button
+                  type="button"
+                  aria-label={`Bỏ chọn ghế ${seat?.seat_code ?? o}`}
                   onClick={() => onRemoveSeat(o)}
                   className="hover:text-green-900"
                 >

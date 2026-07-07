@@ -22,6 +22,7 @@ export function CustomerForm({ form, onChange }: Props) {
       <div className="flex items-center justify-between mb-2">
         <p className="text-sm font-medium text-gray-700">Khách hàng</p>
         <button
+          type="button"
           onClick={() =>
             onChange({ isNewCustomer: !form.isNewCustomer, customer_id: "" })
           }
@@ -43,6 +44,7 @@ export function CustomerForm({ form, onChange }: Props) {
                 <p className="text-xs text-blue-600">{form.customer_phone}</p>
               </div>
               <button
+                type="button"
                 onClick={() =>
                   onChange({
                     customer_id: "",
@@ -68,18 +70,21 @@ export function CustomerForm({ form, onChange }: Props) {
       {form.isNewCustomer && (
         <div className="space-y-2">
           <input
+            aria-label="Họ và tên khách hàng"
             placeholder="Họ và tên *"
             value={form.customer_name}
             onChange={(e) => onChange({ customer_name: e.target.value })}
             className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
           <input
+            aria-label="Số điện thoại khách hàng"
             placeholder="Số điện thoại *"
             value={form.customer_phone}
             onChange={(e) => onChange({ customer_phone: e.target.value })}
             className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
           <input
+            aria-label="Ghi chú"
             placeholder="Ghi chú (tùy chọn)"
             value={form.customer_note}
             onChange={(e) => onChange({ customer_note: e.target.value })}

@@ -12,12 +12,12 @@ import type { CreateTripInput, Route } from "@/features/dispatch/types";
 
 function pickDefaultRoute(routesInColumn: Route[]): Route | null {
   if (routesInColumn.length === 0) return null;
-  return [...routesInColumn].sort((a, b) => a.base_price - b.base_price)[0];
+  return routesInColumn.toSorted((a, b) => a.base_price - b.base_price)[0];
 }
 
 export default function DispatchPage() {
   const [selectedDate, setSelectedDate] = useState<string>(
-    todayDateInputValue(),
+    todayDateInputValue,
   );
   const [selectedTripId, setSelectedTripId] = useState<string | null>(null);
   const [registerError, setRegisterError] = useState<string | null>(null);
@@ -47,7 +47,7 @@ export default function DispatchPage() {
       byVehicle.set(t.vehicle_id, list);
     }
     for (const list of byVehicle.values()) {
-      const sorted = [...list].sort(
+      const sorted = list.toSorted(
         (a, b) =>
           minutesOfDay(a.planned_departure_time) -
           minutesOfDay(b.planned_departure_time),

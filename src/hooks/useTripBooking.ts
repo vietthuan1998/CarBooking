@@ -1,13 +1,14 @@
 import { useCallback, useEffect, useState } from "react";
-import axios from "axios";
 import type {
   BookingForm,
   Seat,
   Trip,
   TripSeat,
 } from "@/features/booking/types";
-import { edgeFunctionClient } from "@/utils/axiosClient";
-import { getTripSeatsWithBookings } from "@/services/bookingService";
+import {
+  createBooking,
+  getTripSeatsWithBookings,
+} from "@/services/bookingService";
 
 interface Args {
   trip: Trip;
@@ -71,14 +72,16 @@ export function useTripBooking({
 
   const handleSeatClick = (seatOrder: number) => {
     if (seatOrder === 1) return; // driver
-    setSelectedSeatOrders((prev) => {
-      const next = prev.includes(seatOrder)
-        ? prev.filter((x) => x !== seatOrder)
-        : [...prev, seatOrder];
-      if (next.length > 0) onFormOpen(trip.id);
-      else onFormOpen(null);
-      return next;
-    });
+    // Tính `next` trước rồi mới gọi onFormOpen ở ngoài — không được gọi
+    // setState của component khác (BookingsPage) bên trong updater function
+    // của setSelectedSeatOrders, vì updater phải thuần (React có thể gọi lại
+    // nó bất kỳ lúc nào, kể cả trong lúc render), nếu không sẽ gây lỗi
+    // "Cannot update a component while rendering a different component".
+    const next = selectedSeatOrders.includes(seatOrder)
+      ? selectedSeatOrders.filter((x) => x !== seatOrder)
+      : [...selectedSeatOrders, seatOrder];
+    setSelectedSeatOrders(next);
+    onFormOpen(next.length > 0 ? trip.id : null);
   };
 
   const handleRemoveSeat = (seatOrder: number) =>
@@ -126,7 +129,7 @@ export function useTripBooking({
       })
       .filter(Boolean);
     try {
-      await edgeFunctionClient.post("/create-booking", {
+      await createBooking({
         customer_id: form.isNewCustomer ? undefined : form.customer_id,
         customer_name: form.isNewCustomer ? form.customer_name : undefined,
         customer_phone: form.isNewCustomer ? form.customer_phone : undefined,
@@ -144,11 +147,7 @@ export function useTripBooking({
       handleReset();
       onSuccess("Đặt vé thành công!");
     } catch (e: unknown) {
-      const msg = axios.isAxiosError(e)
-        ? e.response?.data?.error ?? e.message
-        : e instanceof Error
-        ? e.message
-        : "Có lỗi xảy ra";
+      const msg = e instanceof Error ? e.message : "Có lỗi xảy ra";
       setFormError(msg);
       onError(msg);
     } finally {

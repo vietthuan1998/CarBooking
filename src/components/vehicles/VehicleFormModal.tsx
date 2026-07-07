@@ -29,10 +29,14 @@ export function VehicleFormModal({
         </div>
         <div className="space-y-4 p-6">
           <div>
-            <label className="mb-1.5 block text-sm font-medium text-slate-700">
+            <label
+              htmlFor="vehicle-name"
+              className="mb-1.5 block text-sm font-medium text-slate-700"
+            >
               Tên xe <span className="text-red-500">*</span>
             </label>
             <input
+              id="vehicle-name"
               type="text"
               placeholder="VD: Ford Transit 7 chỗ"
               value={form.vehicle_name}
@@ -43,10 +47,14 @@ export function VehicleFormModal({
             />
           </div>
           <div>
-            <label className="mb-1.5 block text-sm font-medium text-slate-700">
+            <label
+              htmlFor="vehicle-plate"
+              className="mb-1.5 block text-sm font-medium text-slate-700"
+            >
               Biển số xe <span className="text-red-500">*</span>
             </label>
             <input
+              id="vehicle-plate"
               type="text"
               placeholder="VD: 75A-12345"
               value={form.plate_number}
@@ -61,10 +69,14 @@ export function VehicleFormModal({
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="mb-1.5 block text-sm font-medium text-slate-700">
+              <label
+                htmlFor="vehicle-seat-count"
+                className="mb-1.5 block text-sm font-medium text-slate-700"
+              >
                 Số chỗ ngồi <span className="text-red-500">*</span>
               </label>
               <select
+                id="vehicle-seat-count"
                 value={form.seat_count}
                 onChange={(e) =>
                   onFormChange((f) => ({
@@ -79,19 +91,24 @@ export function VehicleFormModal({
               </select>
             </div>
             <div>
-              <label className="mb-1.5 block text-sm font-medium text-slate-700">
+              <label
+                htmlFor="vehicle-status"
+                className="mb-1.5 block text-sm font-medium text-slate-700"
+              >
                 Trạng thái
               </label>
               <select
+                id="vehicle-status"
                 value={form.status}
                 onChange={(e) =>
                   onFormChange((f) => ({
                     ...f,
-                    status: e.target.value as "active" | "inactive",
+                    status: e.target.value as VehicleFormInput["status"],
                   }))
                 }
                 className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm focus:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-100"
               >
+                <option value="pending">Chờ duyệt</option>
                 <option value="active">Hoạt động</option>
                 <option value="inactive">Ngưng hoạt động</option>
               </select>

@@ -15,6 +15,7 @@ export function DispatchHeader({
       </h1>
       <input
         type="date"
+        aria-label="Chọn ngày điều phối"
         value={selectedDate}
         onChange={(e) => onDateChange(e.target.value)}
         className="rounded-md border border-gray-300 px-3 py-1.5 text-sm focus:border-blue-500 focus:outline-none"

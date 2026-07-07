@@ -1,7 +1,15 @@
+import { useState } from "react";
 import { SeatPicker } from "./SeatPicker";
 import { TripCardHeader } from "./TripCardHeader";
-import type { BookingForm, Route, Trip } from "@/features/booking/types";
+import type {
+  BookingForm,
+  Route,
+  Seat,
+  SeatBookingInfo,
+  Trip,
+} from "@/features/booking/types";
 import { TripBookingForm } from "./TripBookingForm";
+import { SeatBookingInfoForm } from "./SeatBookingInfoForm";
 import { useTripBooking } from "@/hooks/useTripBooking";
 import { getRouteColumn } from "@/utils/helpers";
 
@@ -27,6 +35,10 @@ export function TripCard({
   onError,
 }: Props) {
   const isActive = activeFormTripId === trip.id;
+  const [viewingBooking, setViewingBooking] = useState<{
+    seats: Seat[];
+    booking: SeatBookingInfo;
+  } | null>(null);
 
   // Các tuyến cùng chiều với chuyến này (VD: Huế → Đà Nẵng, Huế → Hội An)
   // để khách chọn điểm đến cụ thể và tính giá vé tương ứng.
@@ -59,6 +71,11 @@ export function TripCard({
   ).length;
   const showForm = isActive && selectedSeatOrders.length > 0;
 
+  const handleSelectSeat = (order: number) => {
+    setViewingBooking(null);
+    handleSeatClick(order);
+  };
+
   // Chỉ chuyến 'scheduled' mới cho đặt vé — chuyến khác vẫn hiển thị ghế
   // (giữ nguyên bộ lọc trạng thái) nhưng ghế bị disable, không bấm chọn được.
   const isBookable = trip.trip_status === "scheduled";
@@ -79,31 +96,42 @@ export function TripCard({
             tripSeats={tripSeats}
             seatCount={trip.vehicle.seat_count}
             selectedSeatOrders={selectedSeatOrders}
-            onSeatClick={handleSeatClick}
+            onSeatClick={handleSelectSeat}
             onRemoveSeat={handleRemoveSeat}
+            onViewBooking={(seats, booking) =>
+              setViewingBooking({ seats, booking })
+            }
             disabled={!isBookable}
           />
         )}
       </div>
 
-      {/* Inline booking form — only shown when seats are selected */}
-      {showForm && (
-        <TripBookingForm
-          form={form}
-          onFormChange={onFormChange}
-          origin={trip.route.origin}
-          destination={trip.route.destination}
-          routes={directionRoutes}
-          selectedCount={selectedSeatOrders.length}
-          error={formError}
-          submitting={submitting}
-          onReset={handleReset}
-          onSubmit={handleSubmit}
+      {/* Thông tin ghế đã đặt — ưu tiên hơn form đặt vé mới */}
+      {viewingBooking ? (
+        <SeatBookingInfoForm
+          seats={viewingBooking.seats}
+          booking={viewingBooking.booking}
+          onClose={() => setViewingBooking(null)}
         />
+      ) : (
+        showForm && (
+          <TripBookingForm
+            form={form}
+            onFormChange={onFormChange}
+            origin={trip.route.origin}
+            destination={trip.route.destination}
+            routes={directionRoutes}
+            selectedCount={selectedSeatOrders.length}
+            error={formError}
+            submitting={submitting}
+            onReset={handleReset}
+            onSubmit={handleSubmit}
+          />
+        )
       )}
 
       {/* Footer hint when no seat selected */}
-      {!seatsLoading && !showForm && (
+      {!seatsLoading && !showForm && !viewingBooking && (
         <div className="px-4 pb-3 text-center">
           <p className="text-xs text-gray-400">
             {!isBookable

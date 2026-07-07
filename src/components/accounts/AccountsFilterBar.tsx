@@ -64,6 +64,7 @@ export function AccountsFilterBar({
         />
         <input
           type="text"
+          aria-label="Tìm họ tên, SĐT"
           placeholder="Tìm họ tên, SĐT..."
           value={search}
           onChange={(e) => onSearchChange(e.target.value)}

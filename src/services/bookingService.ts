@@ -1,65 +1,7 @@
+import axios from "axios";
 import { supabase } from "@/utils/supabase";
-
-export interface Booking {
-  id: string;
-  booking_code: string;
-  customer_id: string;
-  trip_id: string;
-  pickup_address: string;
-  dropoff_address: string;
-  fare_amount: number;
-  booking_source: string;
-  status: "pending" | "confirmed" | "cancelled" | "completed";
-}
-
-export interface BookingWithDetails extends Booking {
-  customer?: {
-    id: string;
-    full_name: string;
-    phone: string;
-    note?: string;
-  };
-  trip?: {
-    id: string;
-    trip_code: string;
-    planned_departure_time: string;
-    trip_status: string;
-    vehicle?: { plate_number: string; vehicle_name: string; seat_count: number };
-    route?: { route_name: string; origin: string; destination: string };
-  };
-  trip_seats?: Array<{
-    seat_id: string;
-    seat?: { seat_code: string; seat_order: number };
-  }>;
-}
-
-export async function getUserBookings(customerId: string): Promise<BookingWithDetails[]> {
-  const { data, error } = await supabase
-    .from("bookings")
-    .select(`
-      *,
-      customer:customers(id, full_name, phone, note),
-      trip:trips(id, trip_code, planned_departure_time, trip_status,
-        vehicle:vehicles(plate_number, vehicle_name, seat_count),
-        route:routes(route_name, origin, destination)
-      ),
-      trip_seats(seat_id, seat:seats(seat_code, seat_order))
-    `)
-    .eq("customer_id", customerId)
-    .order("id", { ascending: false });
-
-  if (error) throw error;
-  return data ?? [];
-}
-
-export async function cancelBooking(bookingId: string): Promise<void> {
-  const { error } = await supabase
-    .from("bookings")
-    .update({ status: "cancelled" })
-    .eq("id", bookingId);
-
-  if (error) throw error;
-}
+import { edgeFunctionClient } from "@/utils/axiosClient";
+import type { Customer, Route, Trip } from "@/features/booking/types";
 
 export interface TripSeatRow {
   id: string;
@@ -73,6 +15,7 @@ export interface TripSeatRow {
     pickup_address: string;
     dropoff_address: string;
     status: string;
+    fare_amount: number;
     customer: { full_name: string; phone: string } | null;
   } | null;
 }
@@ -83,7 +26,7 @@ export async function getTripSeatsWithBookings(tripId: string): Promise<TripSeat
     .select(`
       id, seat_id, status, booking_id,
       seat:seats(id, seat_code, seat_order),
-      booking:bookings(id, booking_code, pickup_address, dropoff_address, status,
+      booking:bookings(id, booking_code, pickup_address, dropoff_address, status, fare_amount,
         customer:customers(full_name, phone)
       )
     `)
@@ -92,4 +35,101 @@ export async function getTripSeatsWithBookings(tripId: string): Promise<TripSeat
 
   if (error) throw error;
   return (data ?? []) as unknown as TripSeatRow[];
+}
+
+// Danh sách tuyến active (kèm base_price) để khách chọn tuyến cụ thể lúc đặt vé.
+export async function getActiveRoutes(): Promise<Route[]> {
+  const { data, error } = await supabase
+    .from("routes")
+    .select("id, route_name, origin, destination, base_price")
+    .eq("status", "active")
+    .order("route_name");
+  if (error) throw error;
+  return (data ?? []) as unknown as Route[];
+}
+
+export async function getTripsByDate(
+  date: string,
+  trip_status?: "scheduled" | "in_progress" | "completed" | "cancelled",
+): Promise<Trip[]> {
+  // Build local-time day boundaries → UTC for Supabase timestamptz
+  const d = new Date(`${date}T00:00:00`);
+  const dayStart = new Date(
+    d.getFullYear(),
+    d.getMonth(),
+    d.getDate(),
+    0,
+    0,
+    0,
+    0,
+  ).toISOString();
+  const dayEnd = new Date(
+    d.getFullYear(),
+    d.getMonth(),
+    d.getDate(),
+    23,
+    59,
+    59,
+    999,
+  ).toISOString();
+
+  let query = supabase
+    .from("trips")
+    .select(
+      `id, trip_code, planned_departure_time, trip_status,
+       vehicle:vehicles(id, plate_number, vehicle_name, seat_count),
+       route:routes(route_name, origin, destination)`,
+    )
+    .gte("planned_departure_time", dayStart)
+    .lte("planned_departure_time", dayEnd)
+    .order("planned_departure_time");
+
+  if (trip_status) {
+    query = query.eq("trip_status", trip_status);
+  }
+
+  const { data, error } = await query;
+  if (error) throw error;
+  return (data ?? []) as unknown as Trip[];
+}
+
+export async function searchCustomers(
+  query: string,
+  limit = 6,
+): Promise<Customer[]> {
+  const { data, error } = await supabase
+    .from("customers")
+    .select("id, full_name, phone, note")
+    .or(`full_name.ilike.%${query}%,phone.ilike.%${query}%`)
+    .limit(limit);
+  if (error) throw error;
+  return data ?? [];
+}
+
+export interface CreateBookingInput {
+  // Khách mới: name/phone/note. Khách đã có: customer_id.
+  customer_id?: string;
+  customer_name?: string;
+  customer_phone?: string;
+  customer_note?: string;
+  trip_id: string;
+  seat_ids: string[];
+  pickup_address: string;
+  dropoff_address: string;
+  route_id: string;
+}
+
+// Đặt vé qua Edge Function (upsert customer + check ghế + insert booking
+// nguyên tử ở server). Ném Error với message tiếng Việt từ server nếu lỗi.
+export async function createBooking(input: CreateBookingInput): Promise<void> {
+  try {
+    await edgeFunctionClient.post("/create-booking", input);
+  } catch (err: unknown) {
+    const message = axios.isAxiosError(err)
+      ? (err.response?.data?.error ?? err.message)
+      : err instanceof Error
+      ? err.message
+      : "Có lỗi xảy ra";
+    throw new Error(message, { cause: err });
+  }
 }

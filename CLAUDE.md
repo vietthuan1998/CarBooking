@@ -1,0 +1,132 @@
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
+Hệ thống quản trị xe ghép Huế ↔ Đà Nẵng/Hội An (admin dashboard). UI text tiếng Việt, code/DB tiếng Anh.
+
+## Commands
+
+```bash
+npm run dev        # Vite dev server (localhost:5173)
+npm run build      # tsc -b && vite build
+npm run lint       # ESLint
+supabase functions serve <name>   # chạy edge function local
+supabase db push                  # apply migrations
+```
+
+Không có test. Env: `.env.local` cần `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY` (dùng ở `supabase.ts`) **và** `VITE_SUPABASE_ANON_KEY` (dùng ở `axiosClient.ts` — 2 tên khác nhau, cùng giá trị key).
+
+## Stack & Architecture
+
+- React 19 + TS + Vite 8, Tailwind v4 (`@tailwindcss/vite`), Zustand (chỉ auth), React Router v7, lucide-react.
+- Backend = Supabase: Postgres (RLS theo role) + Auth + Edge Functions (Deno).
+- Luồng: `pages → hooks → services → supabase client`. Nghiệp vụ cần atomic/privilege → Edge Function (gọi qua `edgeFunctionClient` axios hoặc `supabase.functions.invoke`).
+- Path alias `@/` → `src/` (vite.config.ts). Import lẫn lộn `@/` và relative.
+
+## Cấu trúc thư mục
+
+```
+src/
+  App.tsx                 # Routes: /login /signup public; / → AdminLayout (dashboard|dispatch|vehicles|drivers|bookings|reports|accounts)
+  app/layout.tsx          # AdminLayout: Sidebar + <Outlet/>, responsive collapse
+  stores/authStore.ts     # Zustand: user/profile/isLoading; initializeAuth() subscribe onAuthStateChange
+  utils/
+    supabase.ts           # createClient singleton
+    axiosClient.ts        # edgeFunctionClient: baseURL {url}/functions/v1, interceptor gắn access_token
+    constants.ts          # STATUS_LABEL/BADGE_CLASS, timeline 05:00-20:00, TRIP_TURNAROUND_MINUTES=150
+    helpers.ts            # format date/time vi-VN, getRouteColumn, getPresetDates, timelinePercent, fCurrency
+  services/               # mỗi file = 1 domain, hàm async ném throw error
+    authService.ts        # signIn/signUp/signOut/getCurrentProfile; type Profile {role: admin|staff|driver, status}
+    accountService.ts     # getProfiles, updateProfile, createAccount (qua edge fn create-account)
+    vehicleService.ts     # CRUD vehicles (join driver:profiles); type VehicleStatus gồm 'pending'
+    bookingService.ts     # getTripSeatsWithBookings, getActiveRoutes, getTripsByDate, searchCustomers, createBooking (edge fn, ném Error message VN)
+    dashboardService.ts   # getDashboardStats/getUpcomingTrips/getRunningTrips/getPendingBookings2 (edge fn)
+    dispatchService.ts    # getActiveRoutes/Vehicles/Drivers, getTripsByDate, scheduleTrip (edge fn, ném Error message VN), updateTripStatus, deleteTrip (map FK 23503)
+    reportService.ts      # getReportOverview, getVehiclePerformance (aggregate client-side)
+  hooks/
+    useBookingsData.ts    # trips theo ngày qua bookingService, tách 2 chiều hue_to_dest/dest_to_hue; loading derive từ depsKey
+    useTripBooking.ts     # state chọn ghế + submit qua bookingService.createBooking; cần đọc trực tiếp khi sửa
+    useDispatchData.ts    # state + orchestration cho DispatchPage, data qua dispatchService; createTrips gọi tuần tự
+    useDispatchColumns.ts # filter routes/trips theo getRouteColumn
+    useDashboard.ts       # load song song stats/upcoming/running/pending
+  features/*/types.ts     # types theo domain (booking, dispatch, dashboard, vehicles=StatusFilter, accounts=RoleFilter, car=SeatPosition)
+  components/
+    auth/                 # ProtectedRoute (chặn nếu !active hoặc role ∉ {admin,staff}), PublicRoute
+    booking/              # BookingsHeader/Body, TripColumn, TripCard, SeatPicker, CustomerSearch (debounce 300ms ilike), CustomerForm, TripBookingForm, SeatBookingInfoForm (xem booking của ghế đã đặt), Toast
+    car/                  # CarTopView + Seat (SVG xe nhìn từ trên), SeatLayout.ts (toạ độ 4/7 chỗ, seat 1 = tài xế)
+    dispatch/             # Timeline + TimeAxis + TripBlock (timeline theo xe), RegisterPanel (đăng ký giờ hàng loạt), SelectedTripBar (đổi status/xóa trip)
+    vehicles/, accounts/, dashboard/, reports/  # header + filter bar + table + modal per domain
+    layout/               # SideBar + sidebar/menuItems.ts (menu items)
+  pages/admin/            # mỗi page giữ state + gọi hook/service, render components cùng domain
+    AccountPage.tsx       # quản lý profiles (admin), tạo account qua edge fn
+    DriversPage.tsx       # danh sách tài xế + duyệt xe pending (approve→active, reject→inactive)
+  pages/UserHomePage.tsx, admin/CustomersPage.tsx  # stub, chưa route
+
+supabase/
+  migrations/
+    20260701082532_init_schema.sql   # toàn bộ schema + triggers + RLS; cần đọc trực tiếp khi sửa DB
+    20260702*                        # customers.phone unique; bookings.route_id
+    20260706022643*                  # fix RLS driver update trips (alias subquery, lỗi 21000)
+    20260706100000*                  # staff được update profile driver (không đổi role)
+    20260707100000*                  # driver tự đăng ký xe: vehicles.driver_id (unique), status 'pending', RLS driver insert/update xe pending
+  functions/              # Deno edge functions, service_role bypass RLS (trừ getPendingBookings dùng JWT user)
+    create-booking/       # index.ts orchestrate; lib/: validate → customer (upsert theo phone) → trip (check bookable+ghế) → route → booking (insert + markSeatsBooked + log)
+    schedule-trip/        # tạo trip: check gap ≥150p giữa 2 chuyến cùng xe + check vị trí xe (dest chuyến trước = origin chuyến mới); cần đọc trực tiếp khi sửa
+    create-account/       # verify caller là admin active → auth.admin.createUser (trigger tự tạo profile)
+    getPendingBookings/   # bookings pending hôm nay, dùng anon key + JWT user (RLS áp dụng)
+  seed.sql                # 4 routes + admin user vietthuan1998@gmail.com
+```
+
+Root: `drizzle.config.ts` + devDep `drizzle-kit` là setup dở dang (schema.ts không tồn tại, `drizzle-orm` đã gỡ khỏi dependencies). README.md outdated (nhắc Ant Design, các file docs đã xóa).
+
+## Signatures chính
+
+| Function | Signature | Mô tả |
+|---|---|---|
+| `useAuthStore` | Zustand store `{user, profile, isLoading, isAuthenticated, initializeAuth(), cleanup()}` | subscribe auth 1 lần (guard `unsubscribe`) |
+| `useBookingsData` | `() → {trips: {hue_to_dest, dest_to_hue}, routes, loading, selectedDate, statusFilter, refresh, ...setters}` | trips trong ngày local |
+| `useTripBooking` | `({trip, form, onFormOpen, onFormChange, onSuccess, onError}) → {tripSeats, vehicleSeats, selectedSeatOrders, handleSeatClick/RemoveSeat/Reset/Submit, ...}` | booking 1 trip; ghế derive từ trip_seats |
+| `useDispatchData` | `(selectedDate: string) → {routes, vehicles, drivers, trips, createTrip(s), updateTripStatus, deleteTrip, refresh, ...}` | createTrips chạy tuần tự để server check gap chính xác |
+| `getTripSeatsWithBookings` | `(tripId) → TripSeatRow[]` | join seat + booking + customer |
+| `createAccount` | `(input: {email,password,full_name,phone,role}) → Profile` | invoke edge fn; tự parse error body JSON |
+| `getRouteColumn` | `(route) → "from-hue" \| "to-hue" \| null` | phân cột theo chuỗi "huế" trong origin/destination |
+| `getVehiclePerformance` | `(start, end: Date) → VehiclePerformance[]` | occupancy = booked seats / (completed trips × (seat_count−1)) |
+
+## DB schema (tóm tắt)
+
+- `profiles(id=auth.users.id, role admin|staff|driver, status)` — trigger `handle_new_user` tự tạo từ `raw_user_meta_data`, role default **'staff'**.
+- `vehicles(seat_count ∈ {4,7}, status active|inactive|maintenance|pending, driver_id unique)` — trigger tự insert `seats` (seat_count+1 ghế, labels A1..C3, seat_order 1 = tài xế; SECURITY DEFINER).
+- `routes(origin, destination, base_price)`, `customers(phone unique, không có auth)`.
+- `trips(trip_code unique, planned/actual_departure_time, trip_status scheduled|in_progress|completed|cancelled)` — trigger tự populate `trip_seats` (status available|locked|booked, locked_until có nhưng client chưa dùng lock).
+- `bookings(booking_code, customer_id, trip_id, route_id, fare_amount, status pending|confirmed|cancelled|completed)` — trigger log vào `booking_status_logs`; đổi driver log vào `trip_driver_logs`.
+- RLS: helper `get_my_role()`/`is_admin_or_staff()` (SECURITY DEFINER). Admin/staff full access; driver chỉ đọc dữ liệu chuyến/xe của mình + update trip_status + tự đăng ký xe pending. Anon chỉ SELECT routes.
+
+## Luồng dữ liệu chính
+
+**Auth**: `App` → `initializeAuth()` → `onAuthStateChange` → `getCurrentProfile()` → `ProtectedRoute` chỉ cho `admin|staff` + `status=active` vào web (driver dùng app mobile riêng).
+
+**Đặt vé (BookingsPage)**:
+- `useBookingsData` load trips theo ngày → 2 cột theo chiều Huế đi/về.
+- Click ghế trong `TripCard`/`SeatPicker` → mở `TripBookingForm` (form share toàn page, `activeFormTripId` đảm bảo chỉ 1 form mở).
+- Submit → edge fn `create-booking`: validate → upsert customer theo phone → check trip `scheduled` + ghế available → `fare_amount = route.base_price × số ghế` → insert booking → update trip_seats sang booked (lỗi thì xóa booking rollback thủ công — **không phải transaction thật**).
+- Khách chọn `route_id` con (VD Huế→Hội An) có thể khác route của trip.
+
+**Điều phối (DispatchPage)**:
+- `RegisterPanel` nhập giờ nhiều xe → `createTrips` gọi tuần tự edge fn `schedule-trip`.
+- Server check: không trùng giờ chính xác, gap ≥ `MIN_GAP_MINUTES=150` với chuyến trước/sau cùng xe, vị trí xe khớp (destination chuyến trước = origin chuyến mới). Trả 409 kèm message tiếng Việt.
+- Client cũng highlight conflict trên `Timeline` bằng `TRIP_TURNAROUND_MINUTES` — **phải sync 2 hằng số này**.
+- Xóa trip có booking → FK 23503 → message "hãy hủy thay vì xóa".
+
+**Duyệt xe tài xế**: driver (mobile) insert vehicle `status=pending` + `driver_id=mình` (RLS cho phép) → `DriversPage` approve (`active`) / reject (`inactive`).
+
+## Quy ước & quirks
+
+- Data access phải nằm ở `src/services/*` — hook/component không import `supabase`/`edgeFunctionClient` trực tiếp (đã enforce toàn codebase).
+- Lọc theo ngày: luôn build boundary ngày theo **local time** rồi `.toISOString()` cho cột `timestamptz` (pattern lặp ở bookingService/dispatchService/dashboardService).
+- Error từ edge fn qua axios: map `e.response.data.error` → `Error` message VN ngay trong service (xem `scheduleTrip`/`createBooking`); qua `functions.invoke`: phải tự `context.json()` để lấy message (xem `accountService.createAccount`).
+- Tạo account admin **không** dùng `supabase.auth.signUp` ở client (sẽ tự đăng nhập vào account mới, mất session admin) → luôn qua edge fn `create-account`.
+- Seat layout chọn theo `seatCount > 5 ? sevenSeatLayout : fourSeatLayout`; seat_order 1 luôn là tài xế, không click được.
+- Không gọi setState của component khác trong updater function (xem comment trong `useTripBooking.handleSeatClick`).
+- Naming DB: `trips.planned_departure_time` (không phải `departure_time`), `trip_status` (không phải `status`).
+- RLS policy có subquery self-reference phải alias bảng con (bug 21000 đã fix ở migration 20260706022643).
+- `booking_source ∈ {manual, phone, online}`, hiện luôn `manual`; booking mới luôn `status=pending`.

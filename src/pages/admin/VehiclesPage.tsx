@@ -72,6 +72,7 @@ export default function VehiclesPage() {
 
   const counts: Record<StatusFilter, number> = {
     all: vehicles.length,
+    pending: vehicles.filter((v) => v.status === "pending").length,
     active: vehicles.filter((v) => v.status === "active").length,
     inactive: vehicles.filter((v) => v.status === "inactive").length,
   };
@@ -154,6 +155,25 @@ export default function VehiclesPage() {
     }
   };
 
+  const handleApprove = async (v: Vehicle) => {
+    try {
+      await updateVehicle(v.id, { status: "active" });
+      load();
+    } catch (e: unknown) {
+      alert(e instanceof Error ? e.message : "Duyệt xe thất bại");
+    }
+  };
+
+  const handleReject = async (v: Vehicle) => {
+    if (!window.confirm(`Từ chối đăng ký xe ${v.plate_number}?`)) return;
+    try {
+      await updateVehicle(v.id, { status: "inactive" });
+      load();
+    } catch (e: unknown) {
+      alert(e instanceof Error ? e.message : "Từ chối xe thất bại");
+    }
+  };
+
   return (
     <div className="mx-auto max-w-6xl">
       <VehiclesHeader
@@ -179,6 +199,8 @@ export default function VehiclesPage() {
         onEdit={openEdit}
         onDeleteRequest={setDeleteTarget}
         onToggleStatus={handleToggleStatus}
+        onApprove={handleApprove}
+        onReject={handleReject}
       />
 
       {modal && (

@@ -12,7 +12,7 @@ export function PendingBookingsTable({ bookings }: Props) {
         <h2 className="text-lg font-semibold text-slate-900">
           Booking chờ xử lý
         </h2>
-        <button className="text-sm font-medium text-slate-500 transition hover:text-slate-700">
+        <button type="button" className="text-sm font-medium text-slate-500 transition hover:text-slate-700">
           Xem tất cả
         </button>
       </div>

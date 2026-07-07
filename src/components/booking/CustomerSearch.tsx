@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import type { Customer } from "@/features/booking/types";
-import { supabase } from "@/utils/supabase";
+import { searchCustomers } from "@/services/bookingService";
 
 interface Props {
   onSelect: (c: Customer) => void;
@@ -19,13 +19,13 @@ export function CustomerSearch({ onSelect, onNewCustomer }: Props) {
     }
     const timer = setTimeout(async () => {
       setLoading(true);
-      const { data } = await supabase
-        .from("customers")
-        .select("id, full_name, phone, note")
-        .or(`full_name.ilike.%${query}%,phone.ilike.%${query}%`)
-        .limit(6);
-      setResults(data ?? []);
-      setLoading(false);
+      try {
+        setResults(await searchCustomers(query));
+      } catch {
+        setResults([]);
+      } finally {
+        setLoading(false);
+      }
     }, 300);
     return () => clearTimeout(timer);
   }, [query]);
@@ -34,6 +34,7 @@ export function CustomerSearch({ onSelect, onNewCustomer }: Props) {
     <div className="relative">
       <input
         type="text"
+        aria-label="Tìm khách hàng (tên hoặc SĐT)"
         placeholder="Tìm khách hàng (tên hoặc SĐT)..."
         value={query}
         onChange={(e) => setQuery(e.target.value)}
@@ -47,22 +48,25 @@ export function CustomerSearch({ onSelect, onNewCustomer }: Props) {
       {results.length > 0 && (
         <ul className="absolute z-20 w-full bg-white border border-gray-200 rounded-lg shadow-lg mt-1 max-h-48 overflow-y-auto">
           {results.map((c) => (
-            <li
-              key={c.id}
-              className="px-3 py-2 hover:bg-blue-50 cursor-pointer text-sm flex justify-between items-center"
-              onClick={() => {
-                onSelect(c);
-                setQuery("");
-                setResults([]);
-              }}
-            >
-              <span className="font-medium text-gray-800">{c.full_name}</span>
-              <span className="text-gray-500">{c.phone}</span>
+            <li key={c.id}>
+              <button
+                type="button"
+                className="w-full px-3 py-2 hover:bg-blue-50 cursor-pointer text-sm flex justify-between items-center text-left"
+                onClick={() => {
+                  onSelect(c);
+                  setQuery("");
+                  setResults([]);
+                }}
+              >
+                <span className="font-medium text-gray-800">{c.full_name}</span>
+                <span className="text-gray-500">{c.phone}</span>
+              </button>
             </li>
           ))}
         </ul>
       )}
       <button
+        type="button"
         onClick={onNewCustomer}
         className="mt-2 text-xs text-blue-600 hover:underline flex items-center gap-1"
       >

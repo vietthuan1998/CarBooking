@@ -5,6 +5,7 @@ export function TemporaryMap() {
         title="Bản đồ tuyến Huế - Đà Nẵng"
         className="h-full w-full border-0"
         loading="lazy"
+        sandbox="allow-scripts"
         src="https://www.openstreetmap.org/export/embed.html?bbox=107.35%2C15.75%2C108.45%2C16.65&layer=mapnik"
       />
 
