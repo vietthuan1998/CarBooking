@@ -1,5 +1,6 @@
 import {
   CheckCircle2,
+  KeyRound,
   Pencil,
   Power,
   PowerOff,
@@ -28,8 +29,10 @@ interface Props {
   search: string;
   canEdit: (p: Profile) => boolean;
   canToggleStatus: (p: Profile) => boolean;
+  canResetPassword: (p: Profile) => boolean;
   onEdit: (p: Profile) => void;
   onToggleStatus: (p: Profile) => void;
+  onResetPassword: (p: Profile) => void;
 }
 
 export function AccountsTable({
@@ -40,8 +43,10 @@ export function AccountsTable({
   search,
   canEdit,
   canToggleStatus,
+  canResetPassword,
   onEdit,
   onToggleStatus,
+  onResetPassword,
 }: Props) {
   return (
     <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">
@@ -90,6 +95,7 @@ export function AccountsTable({
                 const isSelf = p.id === currentUserId;
                 const editable = canEdit(p);
                 const toggleable = canToggleStatus(p);
+                const resettable = canResetPassword(p);
                 return (
                   <tr
                     key={p.id}
@@ -147,6 +153,16 @@ export function AccountsTable({
                             className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 transition-colors hover:bg-blue-50 hover:text-blue-600"
                           >
                             <Pencil size={15} />
+                          </button>
+                        )}
+                        {resettable && (
+                          <button
+                            type="button"
+                            onClick={() => onResetPassword(p)}
+                            title="Đặt lại mật khẩu"
+                            className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 transition-colors hover:bg-amber-50 hover:text-amber-600"
+                          >
+                            <KeyRound size={15} />
                           </button>
                         )}
                         {toggleable && (

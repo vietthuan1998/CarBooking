@@ -4,6 +4,7 @@ import {
   type Profile,
   createAccount,
   getProfiles,
+  resetPassword,
   updateProfile,
 } from "../../services/accountService";
 import { AccountsHeader } from "../../components/accounts/AccountsHeader";
@@ -14,6 +15,7 @@ import {
   type AccountFormState,
 } from "../../components/accounts/AccountFormModal";
 import { ToggleAccountStatusModal } from "../../components/accounts/ToggleAccountStatusModal";
+import { ResetPasswordModal } from "../../components/accounts/ResetPasswordModal";
 import type { RoleFilter } from "../../features/accounts/types";
 
 const EMPTY_FORM: AccountFormState = {
@@ -46,6 +48,9 @@ export default function SignupPage() {
 
   const [statusTarget, setStatusTarget] = useState<Profile | null>(null);
   const [togglingStatus, setTogglingStatus] = useState(false);
+
+  const [resetTarget, setResetTarget] = useState<Profile | null>(null);
+  const [resetting, setResetting] = useState(false);
 
   const load = useCallback(() => {
     startTransition(async () => {
@@ -102,6 +107,8 @@ export default function SignupPage() {
   const canToggleStatus = (p: Profile) =>
     p.id !== viewer?.id && (isAdmin || (isStaff && p.role === "driver"));
   const canEditRole = (p: Profile) => isAdmin && p.id !== viewer?.id;
+  const canResetPassword = (p: Profile) =>
+    isAdmin || p.id === viewer?.id || (isStaff && p.role === "driver");
 
   const openAdd = () => {
     setForm(EMPTY_FORM);
@@ -188,6 +195,22 @@ export default function SignupPage() {
     }
   };
 
+  const handleResetPassword = async () => {
+    if (!resetTarget) return;
+    setResetting(true);
+    try {
+      const newPassword = await resetPassword(resetTarget.id);
+      alert(
+        `Đã đặt lại mật khẩu cho ${resetTarget.full_name}: ${newPassword}`,
+      );
+      setResetTarget(null);
+    } catch (e: unknown) {
+      alert(e instanceof Error ? e.message : "Đặt lại mật khẩu thất bại");
+    } finally {
+      setResetting(false);
+    }
+  };
+
   const roleOptions: RoleFilter[] = isAdmin
     ? ["all", "admin", "staff", "driver"]
     : ["all"];
@@ -224,8 +247,10 @@ export default function SignupPage() {
         search={search}
         canEdit={canEdit}
         canToggleStatus={canToggleStatus}
+        canResetPassword={canResetPassword}
         onEdit={openEdit}
         onToggleStatus={setStatusTarget}
+        onResetPassword={setResetTarget}
       />
 
       {modal && (
@@ -247,6 +272,15 @@ export default function SignupPage() {
           saving={togglingStatus}
           onCancel={() => setStatusTarget(null)}
           onConfirm={handleToggleStatus}
+        />
+      )}
+
+      {resetTarget && (
+        <ResetPasswordModal
+          account={resetTarget}
+          saving={resetting}
+          onCancel={() => setResetTarget(null)}
+          onConfirm={handleResetPassword}
         />
       )}
     </div>
