@@ -118,6 +118,7 @@ Deno.serve(async (req: Request) => {
         password,
         email_confirm: true,
         user_metadata: { full_name: fullName, phone, role },
+        app_metadata: { status: "active" },
       });
 
     if (createError) {
@@ -126,6 +127,19 @@ Deno.serve(async (req: Request) => {
     }
     if (!created?.user) {
       return json({ error: "Tạo tài khoản thất bại" }, 500);
+    }
+
+    // Trigger handle_new_user mặc định tạo profile 'inactive' (chờ duyệt cho
+    // tài khoản tự đăng ký). GoTrue merge app_metadata SAU khi insert user nên
+    // trigger không thấy status active ở trên — account do admin tạo phải
+    // kích hoạt tường minh ở đây.
+    const { error: activateError } = await admin
+      .from("profiles")
+      .update({ status: "active" })
+      .eq("id", created.user.id);
+
+    if (activateError) {
+      return json({ error: activateError.message }, 500);
     }
 
     const { data: profile, error: profileError } = await admin

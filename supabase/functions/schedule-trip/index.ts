@@ -14,8 +14,9 @@
 //   "vehicle_id": "uuid",
 //   "planned_departure_time": "2026-06-30T07:30:00+07:00",
 //   "trip_code": "TRIP-001"          // optional, tự sinh nếu không truyền
-//   // "driver_id": "uuid"          // TODO: bật lại khi có chức năng gán tài xế
 // }
+//
+// Tài xế của chuyến suy ra từ xe (vehicles.driver_id) — trips không còn cột driver_id.
 
 import { createClient } from "jsr:@supabase/supabase-js@2";
 
@@ -55,7 +56,6 @@ Deno.serve(async (req: Request) => {
       vehicle_id,
       planned_departure_time,
       trip_code,
-      // driver_id, // TODO: bật lại khi có chức năng gán tài xế
     } = body ?? {};
 
     // ---- Validate input cơ bản ----
@@ -264,7 +264,6 @@ Deno.serve(async (req: Request) => {
         trip_code: finalTripCode,
         route_id,
         vehicle_id,
-        // driver_id: driver_id ?? null, // TODO: bật lại khi có chức năng gán tài xế
         planned_departure_time,
         trip_status: "scheduled",
       })

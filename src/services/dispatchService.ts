@@ -74,7 +74,6 @@ export async function getTripsByDate(date: Date | string): Promise<Trip[]> {
         trip_code,
         route_id,
         vehicle_id,
-        driver_id,
         planned_departure_time,
         actual_departure_time,
         actual_arrival_time,
@@ -104,7 +103,6 @@ export async function scheduleTrip(
         vehicle_id,
         planned_departure_time,
         trip_code,
-        // driver_id, // TODO: bật lại khi có chức năng gán tài xế
       },
     );
     return data.trip;

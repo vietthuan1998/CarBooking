@@ -69,12 +69,17 @@ supabase/
     20260706022643*                  # fix RLS driver update trips (alias subquery, lỗi 21000)
     20260706100000*                  # staff được update profile driver (không đổi role)
     20260707100000*                  # driver tự đăng ký xe: vehicles.driver_id (unique), status 'pending', RLS driver insert/update xe pending
+    20260707110000*                  # driver SELECT customers trên chuyến của mình; khóa planned_departure_time/trip_code trong policy update trips
+    20260707120000*                  # trigger chặn driver đổi seat_count (with check self-ref gây recursion — xem comment); driver DELETE xe pending
+    20260708034959*                  # signup chờ duyệt: handle_new_user đọc status từ raw_APP_meta_data, default 'inactive'
+    20260708120000*                  # bỏ trips.driver_id + trip_driver_logs; "chuyến của driver" = chuyến dùng xe mình đứng tên (helper owns_vehicle SECURITY DEFINER)
   functions/              # Deno edge functions, service_role bypass RLS (trừ getPendingBookings dùng JWT user)
     create-booking/       # index.ts orchestrate; lib/: validate → customer (upsert theo phone) → trip (check bookable+ghế) → route → booking (insert + markSeatsBooked + log)
     schedule-trip/        # tạo trip: check gap ≥150p giữa 2 chuyến cùng xe + check vị trí xe (dest chuyến trước = origin chuyến mới); cần đọc trực tiếp khi sửa
-    create-account/       # verify caller là admin active → auth.admin.createUser (trigger tự tạo profile)
+    create-account/       # verify caller là admin active → auth.admin.createUser + update profile sang active (trigger tạo profile 'inactive')
+    reset-password/       # đặt mật khẩu mặc định theo role đích (driver 123456, staff 111111, admin @dmin123); admin reset tất cả, staff chỉ mình+driver
     getPendingBookings/   # bookings pending hôm nay, dùng anon key + JWT user (RLS áp dụng)
-  seed.sql                # 4 routes + admin user vietthuan1998@gmail.com
+  seed.sql                # 4 routes + admin admin@admin.com / @dmin123 (hash bằng crypt() lúc seed)
 ```
 
 Root: `drizzle.config.ts` + devDep `drizzle-kit` là setup dở dang (schema.ts không tồn tại, `drizzle-orm` đã gỡ khỏi dependencies). README.md outdated (nhắc Ant Design, các file docs đã xóa).
@@ -94,12 +99,12 @@ Root: `drizzle.config.ts` + devDep `drizzle-kit` là setup dở dang (schema.ts 
 
 ## DB schema (tóm tắt)
 
-- `profiles(id=auth.users.id, role admin|staff|driver, status)` — trigger `handle_new_user` tự tạo từ `raw_user_meta_data`, role default **'staff'**.
+- `profiles(id=auth.users.id, role admin|staff|driver, status)` — trigger `handle_new_user` tự tạo từ `raw_user_meta_data`, role default **'staff'**; status default **'inactive'** (tự đăng ký phải chờ duyệt), chỉ 'active' khi `raw_app_meta_data.status='active'` ngay lúc insert (seed). GoTrue merge app_metadata SAU insert nên edge fn `create-account` update profile sang active tường minh.
 - `vehicles(seat_count ∈ {4,7}, status active|inactive|maintenance|pending, driver_id unique)` — trigger tự insert `seats` (seat_count+1 ghế, labels A1..C3, seat_order 1 = tài xế; SECURITY DEFINER).
 - `routes(origin, destination, base_price)`, `customers(phone unique, không có auth)`.
-- `trips(trip_code unique, planned/actual_departure_time, trip_status scheduled|in_progress|completed|cancelled)` — trigger tự populate `trip_seats` (status available|locked|booked, locked_until có nhưng client chưa dùng lock).
-- `bookings(booking_code, customer_id, trip_id, route_id, fare_amount, status pending|confirmed|cancelled|completed)` — trigger log vào `booking_status_logs`; đổi driver log vào `trip_driver_logs`.
-- RLS: helper `get_my_role()`/`is_admin_or_staff()` (SECURITY DEFINER). Admin/staff full access; driver chỉ đọc dữ liệu chuyến/xe của mình + update trip_status + tự đăng ký xe pending. Anon chỉ SELECT routes.
+- `trips(trip_code unique, planned/actual_departure_time, trip_status scheduled|in_progress|completed|cancelled)` — trigger tự populate `trip_seats` (status available|locked|booked, locked_until có nhưng client chưa dùng lock). **Không có cột driver_id** (bỏ ở 20260708120000): tài xế của chuyến = chủ xe (`vehicles.driver_id`), client embed driver qua `vehicle:vehicles(driver:profiles(...))`.
+- `bookings(booking_code, customer_id, trip_id, route_id, fare_amount, status pending|confirmed|cancelled|completed)` — trigger log vào `booking_status_logs`.
+- RLS: helper `get_my_role()`/`is_admin_or_staff()`/`owns_vehicle()` (SECURITY DEFINER). Admin/staff full access; driver chỉ đọc dữ liệu chuyến chạy bằng xe mình đứng tên + update trip_status + tự đăng ký xe pending. Anon chỉ SELECT routes.
 
 ## Luồng dữ liệu chính
 

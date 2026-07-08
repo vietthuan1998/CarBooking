@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { Navigate } from "react-router-dom";
 import { useAuthStore } from "@/stores/authStore";
+import { canAccessAdminPortal } from "@/services/authService";
 
 interface PublicRouteProps {
   children: ReactNode;
@@ -9,6 +10,7 @@ interface PublicRouteProps {
 export default function PublicRoute({ children }: PublicRouteProps) {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const isLoading = useAuthStore((s) => s.isLoading);
+  const profile = useAuthStore((s) => s.profile);
 
   if (isLoading) {
     return (
@@ -20,7 +22,10 @@ export default function PublicRoute({ children }: PublicRouteProps) {
     );
   }
 
-  if (isAuthenticated) {
+  // Chỉ đẩy vào dashboard khi session đủ quyền vào web quản trị.
+  // Session không đủ quyền (VD driver) thì vẫn hiện trang login, tránh
+  // vòng lặp redirect qua lại với ProtectedRoute.
+  if (isAuthenticated && canAccessAdminPortal(profile)) {
     return <Navigate to="/dashboard" replace />;
   }
 
