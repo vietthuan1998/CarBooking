@@ -124,7 +124,15 @@ export async function updateTripStatus(
     .from("trips")
     .update({ trip_status })
     .eq("id", tripId);
-  if (error) throw error;
+  if (error) {
+    // Unique index: mỗi xe chỉ 1 chuyến in_progress tại 1 thời điểm
+    if (error.code === "23505") {
+      throw new Error(
+        "Xe này đang có chuyến khác đang chạy. Hãy hoàn thành chuyến đó trước.",
+      );
+    }
+    throw error;
+  }
 }
 
 export async function deleteTrip(tripId: string): Promise<void> {
