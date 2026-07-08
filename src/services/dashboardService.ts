@@ -135,6 +135,8 @@ export async function getUpcomingTrips(date: Date): Promise<UpcomingTrip[]> {
 export async function getRunningTrips(date: Date): Promise<RunningTrip[]> {
   const { startISO, endISO } = getDayRange(date);
 
+  // trips không còn cột driver_id (migration 20260708120000) — tài xế của
+  // chuyến suy ra từ chủ xe (vehicles.driver_id), nên embed driver qua vehicle.
   const { data, error } = await supabase
     .from("trips")
     .select(
@@ -151,11 +153,11 @@ export async function getRunningTrips(date: Date): Promise<RunningTrip[]> {
       vehicle:vehicles (
         id,
         plate_number,
-        vehicle_name
-      ),
-      driver:profiles (
-        full_name,
-        phone
+        vehicle_name,
+        driver:profiles (
+          full_name,
+          phone
+        )
       )
     `,
     )
@@ -167,7 +169,25 @@ export async function getRunningTrips(date: Date): Promise<RunningTrip[]> {
 
   if (error) throw error;
 
-  return data as unknown as RunningTrip[];
+  type Row = Omit<RunningTrip, "driver" | "vehicle"> & {
+    vehicle:
+      | (NonNullable<RunningTrip["vehicle"]> & {
+          driver: RunningTrip["driver"];
+        })
+      | null;
+  };
+
+  return ((data as unknown as Row[]) ?? []).map(({ vehicle, ...trip }) => ({
+    ...trip,
+    vehicle: vehicle
+      ? {
+          id: vehicle.id,
+          plate_number: vehicle.plate_number,
+          vehicle_name: vehicle.vehicle_name,
+        }
+      : null,
+    driver: vehicle?.driver ?? null,
+  }));
 }
 
 export async function getPendingBookings2() {
