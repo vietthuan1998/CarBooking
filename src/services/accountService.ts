@@ -54,9 +54,28 @@ export async function updateProfile(
 export async function createAccount(
   input: CreateAccountInput,
 ): Promise<Profile> {
-  const { data, error } = await supabase.functions.invoke("create-account", {
-    body: input,
+  const data = await invokeAccountFunction("create-account", input);
+  return data.profile as Profile;
+}
+
+/**
+ * Đặt lại mật khẩu một tài khoản về giá trị mặc định theo role (qua Edge
+ * Function — cần service role để đổi mật khẩu user khác). Server tự kiểm tra
+ * quyền: admin reset được tất cả, staff chỉ reset chính mình và driver.
+ * Trả về mật khẩu mới để hiển thị cho người thao tác.
+ */
+export async function resetPassword(userId: string): Promise<string> {
+  const data = await invokeAccountFunction("reset-password", {
+    user_id: userId,
   });
+  return data.new_password as string;
+}
+
+async function invokeAccountFunction(
+  name: string,
+  body: object,
+): Promise<Record<string, unknown>> {
+  const { data, error } = await supabase.functions.invoke(name, { body });
   if (error) {
     // Edge Function trả lỗi qua body JSON { error: "..." } kể cả khi status
     // không phải 2xx; supabase-js không tự parse nội dung đó vào `error`,
@@ -69,5 +88,5 @@ export async function createAccount(
     throw new Error(message ?? error.message);
   }
   if (data?.error) throw new Error(data.error);
-  return data.profile as Profile;
+  return data;
 }

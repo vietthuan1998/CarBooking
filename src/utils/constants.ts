@@ -15,6 +15,18 @@ export const STATUS_BADGE_CLASS: Record<TripStatus, string> = {
   cancelled: "bg-red-100 text-red-700",
 };
 
+// Mật khẩu mặc định khi reset tài khoản, theo role của tài khoản bị reset.
+// Chỉ dùng để hiển thị — nguồn chuẩn là DEFAULT_PASSWORDS trong
+// supabase/functions/reset-password/index.ts, đổi bên đó thì phải đổi cả đây.
+export const DEFAULT_RESET_PASSWORDS: Record<
+  "admin" | "staff" | "driver",
+  string
+> = {
+  driver: "123456",
+  staff: "111111",
+  admin: "@dmin123",
+};
+
 // ---- Timeline điều phối xe ----
 export const TIMELINE_DAY_START = 5 * 60; // 05:00
 const TIMELINE_DAY_END = 20 * 60; // 20:00
