@@ -163,6 +163,19 @@ export interface Profile {
   status: "active" | "inactive";
   created_at: string;
 }
+
+/**
+ * Web quản trị chỉ dành cho admin/staff đang active (driver dùng app mobile).
+ * Dùng chung ở ProtectedRoute/PublicRoute/LoginPage — 3 nơi phải cùng một
+ * điều kiện, lệch nhau sẽ gây vòng lặp redirect giữa các route guard.
+ */
+export function canAccessAdminPortal(profile: Profile | null): boolean {
+  return (
+    !!profile &&
+    profile.status === "active" &&
+    (profile.role === "admin" || profile.role === "staff")
+  );
+}
 export async function getCurrentProfile(): Promise<Profile | null> {
   const user = await getCurrentUser();
 

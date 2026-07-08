@@ -5,4 +5,48 @@ values
   ('Huế - Hội An',   'Huế',      'Hội An',   250000, 'active'),
   ('Hội An - Huế',   'Hội An',   'Huế',      250000, 'active');
 
-INSERT INTO "auth"."users" ("instance_id", "id", "aud", "role", "email", "encrypted_password", "email_confirmed_at", "invited_at", "confirmation_token", "confirmation_sent_at", "recovery_token", "recovery_sent_at", "email_change_token_new", "email_change", "email_change_sent_at", "last_sign_in_at", "raw_app_meta_data", "raw_user_meta_data", "is_super_admin", "created_at", "updated_at", "phone", "phone_confirmed_at", "phone_change", "phone_change_token", "phone_change_sent_at", "email_change_token_current", "email_change_confirm_status", "banned_until", "reauthentication_token", "reauthentication_sent_at", "is_sso_user", "deleted_at", "is_anonymous") VALUES ('00000000-0000-0000-0000-000000000000', 'e08342c0-fd45-41f8-98bf-d602013ddbcd', 'authenticated', 'authenticated', 'vietthuan1998@gmail.com', '$2a$10$fkwJZFld92BMru8nX7aBY.0nEN2Y8XcCapTbtWq0mwAO.3F9weGh6', '2026-07-01 08:41:33.169735+00', null, '', null, '', null, '', '', null, '2026-07-01 08:42:45.200176+00', '{"provider": "email", "providers": ["email"]}', '{"sub": "e08342c0-fd45-41f8-98bf-d602013ddbcd", "email": "vietthuan1998@gmail.com", "phone": "0935292231", "full_name": "thuan", "email_verified": true, "phone_verified": false}', null, '2026-07-01 08:41:33.16072+00', '2026-07-02 01:26:53.619005+00', null, null, '', '', null, '', 0, null, '', null, false, null, false);
+-- Tài khoản admin mặc định: admin@admin.com / @dmin123
+-- Trigger handle_new_user tự tạo public.profiles từ raw_user_meta_data
+-- (phải có "role": "admin", thiếu thì trigger default về 'staff').
+insert into auth.users (
+  instance_id,
+  id,
+  aud,
+  role,
+  email,
+  encrypted_password,
+  email_confirmed_at,
+  confirmation_token,
+  recovery_token,
+  email_change_token_new,
+  email_change,
+  raw_app_meta_data,
+  raw_user_meta_data,
+  created_at,
+  updated_at,
+  phone_change,
+  phone_change_token,
+  email_change_token_current,
+  email_change_confirm_status,
+  reauthentication_token,
+  is_sso_user,
+  is_anonymous
+) values (
+  '00000000-0000-0000-0000-000000000000',
+  '00000000-0000-0000-0000-000000000001',
+  'authenticated',
+  'authenticated',
+  'admin@admin.com',
+  extensions.crypt('@dmin123', extensions.gen_salt('bf')),
+  now(),
+  '', '', '', '',
+  '{"provider": "email", "providers": ["email"], "status": "active"}',
+  '{"sub": "00000000-0000-0000-0000-000000000001", "email": "admin@admin.com", "full_name": "Administrator", "role": "admin", "email_verified": true, "phone_verified": false}',
+  now(),
+  now(),
+  '', '', '',
+  0,
+  '',
+  false,
+  false
+);

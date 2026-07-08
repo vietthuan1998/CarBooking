@@ -1,7 +1,12 @@
 import { useState } from "react";
 import type * as React from "react";
-import { useNavigate } from "react-router-dom";
-import { getCurrentProfile, signIn } from "./../../services/authService";
+import { Link, useNavigate } from "react-router-dom";
+import {
+  canAccessAdminPortal,
+  getCurrentProfile,
+  signIn,
+  signOut,
+} from "./../../services/authService";
 
 export default function LoginPage() {
   const navigate = useNavigate();
@@ -27,20 +32,19 @@ export default function LoginPage() {
 
       const profile = await getCurrentProfile();
 
-      if (!profile) {
-        setErrorMessage("Không tìm thấy hồ sơ người dùng trong hệ thống.");
-        return;
-      }
-
-      if (profile.status !== "active") {
-        setErrorMessage(
-          "Tài khoản của bạn đang bị khóa hoặc chưa được kích hoạt.",
-        );
-        return;
-      }
-
-      if (profile.role !== "admin" && profile.role !== "staff") {
-        setErrorMessage("Bạn không có quyền truy cập trang quản trị.");
+      if (!canAccessAdminPortal(profile)) {
+        // Đăng xuất ngay session vừa tạo, nếu không session sẽ tồn đọng và
+        // các route guard sẽ redirect lòng vòng ở lần mở trang sau.
+        await signOut();
+        if (!profile) {
+          setErrorMessage("Không tìm thấy hồ sơ người dùng trong hệ thống.");
+        } else if (profile.status !== "active") {
+          setErrorMessage(
+            "Tài khoản của bạn đang bị khóa hoặc chưa được kích hoạt.",
+          );
+        } else {
+          setErrorMessage("Bạn không có quyền truy cập trang quản trị.");
+        }
         return;
       }
 
@@ -155,6 +159,16 @@ export default function LoginPage() {
               {isLoading ? "Đang đăng nhập..." : "Đăng nhập"}
             </button>
           </form>
+
+          <p className="mt-6 text-center text-sm text-gray-500">
+            Chưa có tài khoản?{" "}
+            <Link
+              to="/signup"
+              className="font-bold text-emerald-600 transition hover:text-emerald-700"
+            >
+              Đăng ký
+            </Link>
+          </p>
         </div>
       </div>
     </div>
