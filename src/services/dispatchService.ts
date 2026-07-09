@@ -1,6 +1,5 @@
-import axios from "axios";
 import { supabase } from "@/utils/supabase";
-import { edgeFunctionClient } from "@/utils/axiosClient";
+import { invokeEdgeFunction } from "@/utils/edgeFunctions";
 import type {
   CreateTripInput,
   Driver,
@@ -95,25 +94,17 @@ export async function getTripsByDate(date: Date | string): Promise<Trip[]> {
 export async function scheduleTrip(
   { route_id, vehicle_id, planned_departure_time, trip_code }: CreateTripInput,
 ): Promise<Trip> {
-  try {
-    const { data } = await edgeFunctionClient.post<{ trip: Trip }>(
-      "/schedule-trip",
-      {
-        route_id,
-        vehicle_id,
-        planned_departure_time,
-        trip_code,
-      },
-    );
-    return data.trip;
-  } catch (err: unknown) {
-    const message = axios.isAxiosError(err)
-      ? (err.response?.data?.error ?? err.message)
-      : err instanceof Error
-      ? err.message
-      : "Không thể tạo chuyến xe";
-    throw new Error(message, { cause: err });
-  }
+  const data = await invokeEdgeFunction<{ trip: Trip }>(
+    "schedule-trip",
+    {
+      route_id,
+      vehicle_id,
+      planned_departure_time,
+      trip_code,
+    },
+    "Không thể tạo chuyến xe",
+  );
+  return data.trip;
 }
 
 export async function updateTripStatus(

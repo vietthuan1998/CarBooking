@@ -14,13 +14,13 @@ supabase functions serve <name>   # chạy edge function local
 supabase db push                  # apply migrations
 ```
 
-Không có test. Env: `.env.local` cần `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY` (dùng ở `supabase.ts`) **và** `VITE_SUPABASE_ANON_KEY` (dùng ở `axiosClient.ts` — 2 tên khác nhau, cùng giá trị key).
+Không có test. Env: `.env.local` cần `VITE_SUPABASE_URL` và `VITE_SUPABASE_PUBLISHABLE_KEY` (dùng ở `supabase.ts`).
 
 ## Stack & Architecture
 
 - React 19 + TS + Vite 8, Tailwind v4 (`@tailwindcss/vite`), Zustand (chỉ auth), React Router v7, lucide-react.
 - Backend = Supabase: Postgres (RLS theo role) + Auth + Edge Functions (Deno).
-- Luồng: `pages → hooks → services → supabase client`. Nghiệp vụ cần atomic/privilege → Edge Function (gọi qua `edgeFunctionClient` axios hoặc `supabase.functions.invoke`).
+- Luồng: `pages → hooks → services → supabase client`. Nghiệp vụ cần atomic/privilege → Edge Function (gọi qua helper `invokeEdgeFunction` — wrap `supabase.functions.invoke`).
 - Path alias `@/` → `src/` (vite.config.ts). Import lẫn lộn `@/` và relative.
 
 ## Cấu trúc thư mục
@@ -33,7 +33,7 @@ src/
   stores/authStore.ts     # Zustand: user/profile/isLoading; initializeAuth() subscribe onAuthStateChange
   utils/
     supabase.ts           # createClient singleton
-    axiosClient.ts        # edgeFunctionClient: baseURL {url}/functions/v1, interceptor gắn access_token
+    edgeFunctions.ts      # invokeEdgeFunction<T>(name, body, fallbackMessage?): wrap functions.invoke, parse error body JSON lấy message VN
     constants.ts          # STATUS_LABEL/BADGE_CLASS, timeline 05:00-20:00, TRIP_TURNAROUND_MINUTES=150
     helpers.ts            # format date/time vi-VN, getRouteColumn, getPresetDates, timelinePercent, fCurrency
   services/               # mỗi file = 1 domain, hàm async ném throw error
@@ -81,14 +81,16 @@ supabase/
     20260709030000*                  # bookings.seat_count + bookings.note (đăng ký online từ landing)
     20260709040000*                  # anon SELECT routes active (landing load tuyến bằng anon key)
     20260709050000*                  # bookings.trip_id nullable + requested_departure_time (khách chọn giờ tự do, staff xếp xe sau; backfill từ trips)
-  functions/              # Deno edge functions, service_role bypass RLS (trừ get-pending-bookings dùng JWT user); tên phải kebab-case/lowercase — CLI (Viper) lowercase key trong config.toml, tên camelCase sẽ bị deploy thành 2 function
-    create-booking/       # index.ts orchestrate; lib/: validate → customer (upsert theo phone) → trip (check bookable+ghế) → route → booking (insert + markSeatsBooked + log)
-    schedule-trip/        # tạo trip: check gap ≥150p giữa 2 chuyến cùng xe + check vị trí xe (dest chuyến trước = origin chuyến mới); cần đọc trực tiếp khi sửa
-    create-account/       # verify caller là admin active → auth.admin.createUser + update profile sang active (trigger tạo profile 'inactive')
-    reset-password/       # đặt mật khẩu mặc định theo role đích (driver 123456, staff 111111, admin @dmin123); admin reset tất cả, staff chỉ mình+driver
+  functions/              # Deno edge functions, service_role bypass RLS (trừ get-pending-bookings dùng JWT user) → PHẢI tự verify caller trừ khi cố ý public; tên phải kebab-case/lowercase — CLI (Viper) lowercase key trong config.toml, tên camelCase sẽ bị deploy thành 2 function
+    _shared/verifyCaller.ts  # verifyCaller(req, admin, allowedRoles, forbiddenMessage?): getUser từ Authorization token + check profiles role/status active, trả {userId, role}; dùng ở CẢ 5 fn cần auth; gateway verify_jwt KHÔNG đủ (anon key cũng là JWT hợp lệ)
+    _shared/adminClient.ts   # createAdminClient(): client service role (bypass RLS) — dùng ở mọi fn trừ get-pending-bookings (fn đó tạo client anon + forward JWT user để RLS áp dụng)
+    create-booking/       # verify caller admin/staff (_shared) → index.ts orchestrate; lib/: validate → customer (upsert theo phone) → trip (check bookable+ghế) → route → booking (insert + markSeatsBooked + log)
+    schedule-trip/        # verify caller admin/staff (_shared) → tạo trip: check gap ≥150p giữa 2 chuyến cùng xe + check vị trí xe (dest chuyến trước = origin chuyến mới); cần đọc trực tiếp khi sửa
+    create-account/       # verify caller admin (_shared) → auth.admin.createUser + update profile sang active (trigger tạo profile 'inactive')
+    reset-password/       # verify caller admin/staff (_shared) → đặt mật khẩu mặc định theo role đích (driver 123456, staff 111111, admin @dmin123); admin reset tất cả, staff chỉ mình+driver
     get-pending-bookings/ # "khách trong ngày": bookings pending+confirmed theo requested_departure_time (client gửi start/end local), pending xếp trước; anon key + JWT user (RLS áp dụng)
     register-booking/     # CÔNG KHAI (verify_jwt=false): khách đăng ký với NGÀY GIỜ TỰ DO → booking pending source=online, trip_id=NULL (staff xếp xe sau); không overwrite tên khách cũ; chặn giờ quá khứ/quá 60 ngày
-    cancel-booking/       # verify caller admin/staff → hủy booking + nhả trip_seats; chặn khi trip không còn 'scheduled' (khách đã được đón)
+    cancel-booking/       # verify caller admin/staff (_shared) → hủy booking + nhả trip_seats; chặn khi trip không còn 'scheduled' (khách đã được đón)
   seed.sql                # 4 routes + admin admin@admin.com / @dmin123 (hash bằng crypt() lúc seed)
 ```
 
@@ -136,9 +138,9 @@ Root: `drizzle.config.ts` + devDep `drizzle-kit` là setup dở dang (schema.ts 
 
 ## Quy ước & quirks
 
-- Data access phải nằm ở `src/services/*` — hook/component không import `supabase`/`edgeFunctionClient` trực tiếp (đã enforce toàn codebase).
+- Data access phải nằm ở `src/services/*` — hook/component không import `supabase`/`invokeEdgeFunction` trực tiếp (đã enforce toàn codebase).
 - Lọc theo ngày: luôn build boundary ngày theo **local time** rồi `.toISOString()` cho cột `timestamptz` (pattern lặp ở bookingService/dispatchService/dashboardService).
-- Error từ edge fn qua axios: map `e.response.data.error` → `Error` message VN ngay trong service (xem `scheduleTrip`/`createBooking`); qua `functions.invoke`: phải tự `context.json()` để lấy message (xem `accountService.createAccount`).
+- Error từ edge fn: `supabase-js` không tự parse body JSON `{error}` khi status non-2xx — helper `invokeEdgeFunction` (utils/edgeFunctions.ts) tự đọc `error.context.json()` và ném `Error` message VN; mọi service gọi edge fn phải đi qua helper này.
 - Tạo account admin **không** dùng `supabase.auth.signUp` ở client (sẽ tự đăng nhập vào account mới, mất session admin) → luôn qua edge fn `create-account`.
 - Seat layout chọn theo `seatCount > 5 ? sevenSeatLayout : fourSeatLayout`; seat_order 1 luôn là tài xế, không click được.
 - Không gọi setState của component khác trong updater function (xem comment trong `useTripBooking.handleSeatClick`).

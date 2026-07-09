@@ -13,7 +13,8 @@
 // Input (JSON body): { "user_id": "<uuid tài khoản cần reset>" }
 // Output: { "new_password": "..." }
 
-import { createClient } from "jsr:@supabase/supabase-js@2";
+import { createAdminClient } from "../_shared/adminClient.ts";
+import { verifyCaller } from "../_shared/verifyCaller.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -44,44 +45,16 @@ Deno.serve(async (req: Request) => {
   if (req.method !== "POST") return json({ error: "Method not allowed" }, 405);
 
   try {
-    const authHeader = req.headers.get("Authorization") ?? "";
-    const token = authHeader.replace(/^Bearer\s+/i, "");
-    if (!token) {
-      return json({ error: "Thiếu Authorization token" }, 401);
-    }
-
-    const admin = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
-    );
+    const admin = createAdminClient();
 
     // ---- Xác thực người gọi ----
-    const { data: callerData, error: callerError } = await admin.auth.getUser(
-      token,
+    const caller = await verifyCaller(
+      req,
+      admin,
+      ["admin", "staff"],
+      "Bạn không có quyền đặt lại mật khẩu",
     );
-    if (callerError || !callerData?.user) {
-      return json({ error: "Token không hợp lệ hoặc đã hết hạn" }, 401);
-    }
-
-    const { data: callerProfile, error: callerProfileError } = await admin
-      .from("profiles")
-      .select("role, status")
-      .eq("id", callerData.user.id)
-      .maybeSingle();
-
-    if (callerProfileError) {
-      return json({ error: callerProfileError.message }, 500);
-    }
-    if (
-      !callerProfile ||
-      callerProfile.status !== "active" ||
-      (callerProfile.role !== "admin" && callerProfile.role !== "staff")
-    ) {
-      return json(
-        { error: "Bạn không có quyền đặt lại mật khẩu" },
-        403,
-      );
-    }
+    if (!caller.ok) return json({ error: caller.message }, caller.status);
 
     // ---- Validate input ----
     const body = await req.json().catch(() => null);
@@ -102,9 +75,9 @@ Deno.serve(async (req: Request) => {
     }
 
     // ---- Phân quyền theo caller/target ----
-    const isSelf = target.id === callerData.user.id;
+    const isSelf = target.id === caller.userId;
     if (
-      callerProfile.role === "staff" &&
+      caller.role === "staff" &&
       !isSelf &&
       target.role !== "driver"
     ) {

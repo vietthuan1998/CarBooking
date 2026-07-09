@@ -18,7 +18,8 @@
 //                                      // fare_amount = routes.base_price * số ghế
 // }
 
-import { createClient } from "jsr:@supabase/supabase-js@2";
+import { createAdminClient } from "../_shared/adminClient.ts";
+import { verifyCaller } from "../_shared/verifyCaller.ts";
 import { corsHeaders, HttpError, json } from "./lib/http.ts";
 import { validateBookingRequest } from "./lib/validate.ts";
 import { resolveCustomerId } from "./lib/customer.ts";
@@ -37,10 +38,16 @@ Deno.serve(async (req: Request) => {
   if (req.method !== "POST") return json({ error: "Method not allowed" }, 405);
 
   try {
-    const supabase = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+    const supabase = createAdminClient();
+
+    // Service role bypass RLS → phải tự chặn người gọi không phải admin/staff.
+    const caller = await verifyCaller(
+      req,
+      supabase,
+      ["admin", "staff"],
+      "Chỉ admin/staff mới có quyền đặt vé",
     );
+    if (!caller.ok) return json({ error: caller.message }, caller.status);
 
     const body = await req.json().catch(() => null);
     if (!body) return json({ error: "Request body không hợp lệ" }, 400);

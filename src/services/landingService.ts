@@ -1,4 +1,4 @@
-import { supabase } from "../utils/supabase";
+import { invokeEdgeFunction } from "../utils/edgeFunctions";
 
 // Landing Page (khách chưa đăng nhập) — đăng ký qua edge fn công khai
 // register-booking; danh sách tuyến dùng getActiveRoutes của bookingService
@@ -23,18 +23,6 @@ export interface RegisterBookingInput {
 export async function registerBooking(
   input: RegisterBookingInput,
 ): Promise<string> {
-  const { data, error } = await supabase.functions.invoke("register-booking", {
-    body: input,
-  });
-  if (error) {
-    // Lấy message tiếng Việt từ body JSON của edge fn (như accountService)
-    const context = (error as { context?: Response }).context;
-    const message = await context?.json?.().then(
-      (b: { error?: string }) => b?.error,
-      () => undefined,
-    );
-    throw new Error(message ?? error.message);
-  }
-  if (data?.error) throw new Error(data.error);
+  const data = await invokeEdgeFunction("register-booking", input);
   return data.booking_code as string;
 }

@@ -18,7 +18,8 @@
 //
 // Tài xế của chuyến suy ra từ xe (vehicles.driver_id) — trips không còn cột driver_id.
 
-import { createClient } from "jsr:@supabase/supabase-js@2";
+import { createAdminClient } from "../_shared/adminClient.ts";
+import { verifyCaller } from "../_shared/verifyCaller.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -43,12 +44,20 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
-    const supabase = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      // Service role key: bypass RLS để check toàn bộ trips + insert,
-      // bất kể RLS của user đang gọi (vì logic check cần thấy hết dữ liệu).
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+    // Service role: bypass RLS để check toàn bộ trips + insert,
+    // bất kể RLS của user đang gọi (vì logic check cần thấy hết dữ liệu).
+    const supabase = createAdminClient();
+
+    // Service role bypass RLS → phải tự chặn người gọi không phải admin/staff.
+    const caller = await verifyCaller(
+      req,
+      supabase,
+      ["admin", "staff"],
+      "Chỉ admin/staff mới có quyền tạo chuyến xe",
     );
+    if (!caller.ok) {
+      return jsonResponse({ error: caller.message }, caller.status);
+    }
 
     const body = await req.json();
     const {

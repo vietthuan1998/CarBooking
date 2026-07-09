@@ -21,7 +21,8 @@
 // profiles.role/status mặc định do trigger handle_new_user() tạo tự động
 // khi insert vào auth.users, dựa trên raw_user_meta_data.
 
-import { createClient } from "jsr:@supabase/supabase-js@2";
+import { createAdminClient } from "../_shared/adminClient.ts";
+import { verifyCaller } from "../_shared/verifyCaller.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -46,43 +47,18 @@ Deno.serve(async (req: Request) => {
   if (req.method !== "POST") return json({ error: "Method not allowed" }, 405);
 
   try {
-    const authHeader = req.headers.get("Authorization") ?? "";
-    const token = authHeader.replace(/^Bearer\s+/i, "");
-    if (!token) {
-      return json({ error: "Thiếu Authorization token" }, 401);
-    }
-
-    const admin = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      // Service role: cần để gọi auth.admin.createUser() và đọc profiles
-      // bất kể RLS, sau khi đã tự xác thực + kiểm tra quyền người gọi bên dưới.
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
-    );
+    // Service role: cần để gọi auth.admin.createUser() và đọc profiles
+    // bất kể RLS, sau khi đã tự xác thực + kiểm tra quyền người gọi bên dưới.
+    const admin = createAdminClient();
 
     // ---- Xác thực người gọi ----
-    const { data: callerData, error: callerError } = await admin.auth.getUser(
-      token,
+    const caller = await verifyCaller(
+      req,
+      admin,
+      ["admin"],
+      "Chỉ admin mới có quyền tạo tài khoản",
     );
-    if (callerError || !callerData?.user) {
-      return json({ error: "Token không hợp lệ hoặc đã hết hạn" }, 401);
-    }
-
-    const { data: callerProfile, error: callerProfileError } = await admin
-      .from("profiles")
-      .select("role, status")
-      .eq("id", callerData.user.id)
-      .maybeSingle();
-
-    if (callerProfileError) {
-      return json({ error: callerProfileError.message }, 500);
-    }
-    if (
-      !callerProfile ||
-      callerProfile.role !== "admin" ||
-      callerProfile.status !== "active"
-    ) {
-      return json({ error: "Chỉ admin mới có quyền tạo tài khoản" }, 403);
-    }
+    if (!caller.ok) return json({ error: caller.message }, caller.status);
 
     // ---- Validate input ----
     const body = await req.json().catch(() => null);

@@ -12,7 +12,7 @@
 //   "note"?: "...", "pickup_address"?: "...", "dropoff_address"?: "..." }
 // → { booking_code }
 
-import { createClient } from "jsr:@supabase/supabase-js@2";
+import { createAdminClient } from "../_shared/adminClient.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -42,10 +42,7 @@ Deno.serve(async (req: Request) => {
   if (req.method !== "POST") return json({ error: "Method not allowed" }, 405);
 
   try {
-    const admin = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
-    );
+    const admin = createAdminClient();
 
     const body = await req.json().catch(() => null);
     if (!body) return json({ error: "Request body không hợp lệ" }, 400);
