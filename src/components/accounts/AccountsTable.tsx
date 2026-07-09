@@ -8,6 +8,7 @@ import {
   XCircle,
 } from "lucide-react";
 import type { Profile } from "../../services/accountService";
+import { displayName } from "../../utils/helpers";
 
 const ROLE_BADGE: Record<Profile["role"], string> = {
   admin: "bg-purple-50 text-purple-700",
@@ -103,7 +104,7 @@ export function AccountsTable({
                   >
                     <td className="px-4 py-3.5 text-slate-400">{idx + 1}</td>
                     <td className="px-4 py-3.5 font-medium text-slate-900">
-                      {p.full_name}
+                      {displayName(p.full_name)}
                       {isSelf && (
                         <span className="ml-2 rounded-full bg-slate-100 px-2 py-0.5 text-xs font-normal text-slate-500">
                           Bạn

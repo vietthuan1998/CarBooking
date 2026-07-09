@@ -39,7 +39,7 @@ export default function Sidebar({
   return (
     <aside
       className={[
-        "fixed left-0 top-0 z-40 flex h-dvh max-h-dvh flex-col overflow-hidden",
+        "fixed left-0 top-0 z-40 flex h-dvh max-h-dvh flex-col",
         "bg-[#06191D] text-white shadow-[12px_0_30px_rgba(15,23,42,0.22)]",
         "transition-all duration-300 ease-in-out",
         "w-72 max-w-[86vw]",

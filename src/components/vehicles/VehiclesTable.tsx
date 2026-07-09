@@ -9,6 +9,7 @@ import {
   XCircle,
 } from "lucide-react";
 import type { Vehicle } from "../../services/vehicleService";
+import { displayName } from "@/utils/helpers";
 
 interface Props {
   vehicles: Vehicle[];
@@ -106,7 +107,7 @@ export function VehiclesTable({
                     {v.driver ? (
                       <div>
                         <div className="font-medium text-slate-800">
-                          {v.driver.full_name}
+                          {displayName(v.driver.full_name)}
                         </div>
                         {v.driver.phone && (
                           <div className="text-xs text-slate-400">

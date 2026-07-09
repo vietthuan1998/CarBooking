@@ -6,6 +6,7 @@ import {
   updateVehicle,
   type Vehicle,
 } from "../../services/vehicleService";
+import { displayName } from "../../utils/helpers";
 
 export default function DriversPage() {
   const [isPending, startTransition] = useTransition();
@@ -122,7 +123,7 @@ export default function DriversPage() {
                       className="transition-colors hover:bg-slate-50/50"
                     >
                       <td className="px-4 py-3.5 font-medium text-slate-900">
-                        {d.full_name}
+                        {displayName(d.full_name)}
                       </td>
                       <td className="px-4 py-3.5 text-slate-600">
                         {d.phone ? (

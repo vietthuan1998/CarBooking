@@ -5,7 +5,8 @@ export type { Profile };
 
 export interface AccountFormInput {
   full_name: string;
-  phone: string;
+  // "" nghĩa là xóa SĐT: gửi null (phone unique, '' đụng nhau còn NULL thì không)
+  phone: string | null;
   role: Profile["role"];
   status: Profile["status"];
 }
@@ -14,7 +15,7 @@ export interface CreateAccountInput {
   email: string;
   password: string;
   full_name: string;
-  phone: string;
+  phone: string | null;
   role: Profile["role"];
 }
 
@@ -26,7 +27,7 @@ export interface CreateAccountInput {
 export async function getProfiles(): Promise<Profile[]> {
   const { data, error } = await supabase
     .from("profiles")
-    .select("id, full_name, phone, role, status, created_at")
+    .select("id, full_name, phone, email, role, status, created_at")
     .order("created_at", { ascending: false });
   if (error) throw error;
   return data ?? [];

@@ -1,5 +1,6 @@
 import { AlertTriangle, PowerOff } from "lucide-react";
 import type { Profile } from "../../services/accountService";
+import { displayName } from "../../utils/helpers";
 
 interface Props {
   account: Profile;
@@ -18,7 +19,7 @@ export function ToggleAccountStatusModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4 backdrop-blur-sm">
-      <div className="w-full max-w-sm rounded-3xl bg-white shadow-2xl">
+      <div className="max-h-full w-full max-w-sm overflow-y-auto rounded-3xl bg-white shadow-2xl">
         <div className="p-6">
           <div
             className={[
@@ -40,7 +41,7 @@ export function ToggleAccountStatusModal({
               <>
                 Tài khoản{" "}
                 <span className="font-semibold text-slate-800">
-                  {account.full_name}
+                  {displayName(account.full_name)}
                 </span>{" "}
                 sẽ có thể đăng nhập lại vào hệ thống.
               </>
@@ -48,7 +49,7 @@ export function ToggleAccountStatusModal({
               <>
                 Tài khoản{" "}
                 <span className="font-semibold text-slate-800">
-                  {account.full_name}
+                  {displayName(account.full_name)}
                 </span>{" "}
                 sẽ không thể đăng nhập nữa. Dữ liệu liên quan (chuyến xe,
                 lịch sử...) vẫn được giữ nguyên.

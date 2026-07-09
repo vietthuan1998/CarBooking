@@ -21,7 +21,7 @@ export function VehicleFormModal({
 }: Props) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4 backdrop-blur-sm">
-      <div className="w-full max-w-md rounded-3xl bg-white shadow-2xl">
+      <div className="max-h-full w-full max-w-md overflow-y-auto rounded-3xl bg-white shadow-2xl">
         <div className="border-b border-slate-100 px-6 py-4">
           <h2 className="text-lg font-semibold text-slate-900">
             {mode === "add" ? "Thêm xe mới" : "Chỉnh sửa thông tin xe"}

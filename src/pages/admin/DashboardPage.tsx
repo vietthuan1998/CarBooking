@@ -1,6 +1,8 @@
 import {useState} from "react";
 import { CalendarDays, Car, Clock, Users, TicketCheck } from "lucide-react";
 import { useDashboard } from "../../hooks/useDashboard";
+import { cancelBooking } from "../../services/bookingService";
+import type { PendingBooking } from "../../features/dashboard/types";
 import { StatCard } from "../../components/dashboard/StatCard";
 import { UpcomingTripsCard } from "../../components/dashboard/UpcomingTripsCard";
 import { RunningTripsCard } from "../../components/dashboard/RunningTripsCard";
@@ -17,7 +19,23 @@ export function DashboardPage() {
     pendingBookings,
     loading,
     errorMessage,
+    refresh,
   } = useDashboard(selectedDate);
+
+  const handleCancelBooking = async (booking: PendingBooking) => {
+    const ok = window.confirm(
+      `Hủy booking ${booking.booking_code} của khách ${
+        booking.customer?.full_name ?? ""
+      }?`,
+    );
+    if (!ok) return;
+    try {
+      await cancelBooking(booking.id);
+      refresh();
+    } catch (e) {
+      window.alert(e instanceof Error ? e.message : "Hủy booking thất bại");
+    }
+  };
 
   if (loading) {
     return (
@@ -95,7 +113,10 @@ export function DashboardPage() {
         <RunningTripsCard trips={runningTrips} />
       </section>
 
-      <PendingBookingsTable bookings={pendingBookings} />
+      <PendingBookingsTable
+        bookings={pendingBookings}
+        onCancel={handleCancelBooking}
+      />
     </main>
   );
 }

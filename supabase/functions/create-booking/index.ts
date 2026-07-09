@@ -62,6 +62,7 @@ Deno.serve(async (req: Request) => {
       request,
       customerId,
       fareAmount,
+      trip.planned_departure_time,
     );
 
     await markSeatsBooked(supabase, tripSeats.map((ts) => ts.id), booking.id);

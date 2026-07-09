@@ -31,7 +31,7 @@ export function AccountFormModal({
 }: Props) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4 backdrop-blur-sm">
-      <div className="w-full max-w-md rounded-3xl bg-white shadow-2xl">
+      <div className="max-h-full w-full max-w-md overflow-y-auto rounded-3xl bg-white shadow-2xl">
         <div className="border-b border-slate-100 px-6 py-4">
           <h2 className="text-lg font-semibold text-slate-900">
             {mode === "add" ? "Thêm tài khoản mới" : "Chỉnh sửa tài khoản"}
@@ -43,7 +43,8 @@ export function AccountFormModal({
               htmlFor="account-full-name"
               className="mb-1.5 block text-sm font-medium text-slate-700"
             >
-              Họ và tên <span className="text-red-500">*</span>
+              Họ và tên{" "}
+              {form.role !== "driver" && <span className="text-red-500">*</span>}
             </label>
             <input
               id="account-full-name"
@@ -55,6 +56,11 @@ export function AccountFormModal({
               }
               className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm placeholder-slate-400 focus:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-100"
             />
+            {form.role === "driver" && (
+              <p className="mt-1 text-xs text-slate-400">
+                Có thể bỏ trống — tài xế tự cập nhật thông tin trên app mobile.
+              </p>
+            )}
           </div>
           <div>
             <label
@@ -75,26 +81,33 @@ export function AccountFormModal({
             />
           </div>
 
+          <div>
+            <label
+              htmlFor="account-email"
+              className="mb-1.5 block text-sm font-medium text-slate-700"
+            >
+              Email {mode === "add" && <span className="text-red-500">*</span>}
+            </label>
+            <input
+              id="account-email"
+              type="email"
+              placeholder="VD: staff@example.com"
+              value={form.email}
+              disabled={mode === "edit"}
+              onChange={(e) =>
+                onFormChange((f) => ({ ...f, email: e.target.value }))
+              }
+              className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm placeholder-slate-400 focus:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-100 disabled:bg-slate-50 disabled:text-slate-400"
+            />
+            {mode === "edit" && (
+              <p className="mt-1 text-xs text-slate-400">
+                Email không thể thay đổi.
+              </p>
+            )}
+          </div>
+
           {mode === "add" && (
             <>
-              <div>
-                <label
-                  htmlFor="account-email"
-                  className="mb-1.5 block text-sm font-medium text-slate-700"
-                >
-                  Email <span className="text-red-500">*</span>
-                </label>
-                <input
-                  id="account-email"
-                  type="email"
-                  placeholder="VD: staff@example.com"
-                  value={form.email}
-                  onChange={(e) =>
-                    onFormChange((f) => ({ ...f, email: e.target.value }))
-                  }
-                  className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm placeholder-slate-400 focus:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-100"
-                />
-              </div>
               <div>
                 <label
                   htmlFor="account-password"

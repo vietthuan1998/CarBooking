@@ -113,9 +113,17 @@ export function timeInputValue(iso: string): string {
   return `${hh}:${mm}`;
 }
 
-/** Vị trí % trên timeline (5h-20h) ứng với 1 mốc phút trong ngày. */
-export function timelinePercent(minutes: number): number {
-  return ((minutes - TIMELINE_DAY_START) / TIMELINE_DAY_SPAN) * 100;
+/**
+ * Vị trí % trên timeline ứng với 1 mốc phút trong ngày.
+ * Mặc định khung 5h-20h; Timeline truyền dayStart/daySpan đã giãn
+ * khi có chuyến ngoài khung.
+ */
+export function timelinePercent(
+  minutes: number,
+  dayStart: number = TIMELINE_DAY_START,
+  daySpan: number = TIMELINE_DAY_SPAN,
+): number {
+  return ((minutes - dayStart) / daySpan) * 100;
 }
 
 export function toInputValue(d: Date): string {
@@ -124,4 +132,12 @@ export function toInputValue(d: Date): string {
 
 export function fCurrency(n: number): string {
   return n.toLocaleString("vi-VN") + " đ";
+}
+
+/**
+ * Tên hiển thị của profile. Account driver có thể được tạo chỉ với
+ * email + mật khẩu (tên rỗng, driver tự cập nhật sau trên app mobile).
+ */
+export function displayName(name: string | null | undefined): string {
+  return name?.trim() ? name : "(Chưa cập nhật)";
 }
