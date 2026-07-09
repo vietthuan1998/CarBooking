@@ -49,34 +49,21 @@ export async function getDashboardStats(date: Date): Promise<DashboardStats> {
       .gte("planned_departure_time", startISO)
       .lte("planned_departure_time", endISO),
 
+    // Lọc theo requested_departure_time (không join trips): booking online
+    // từ landing chưa được xếp xe nên trip_id NULL, join inner sẽ bỏ sót.
     supabase
       .from("bookings")
-      .select(
-        `
-        id,
-        trip:trips!inner (
-          planned_departure_time
-        )
-      `,
-      )
+      .select("id")
       .neq("status", "cancelled")
-      .gte("trips.planned_departure_time", startISO)
-      .lte("trips.planned_departure_time", endISO),
+      .gte("requested_departure_time", startISO)
+      .lte("requested_departure_time", endISO),
 
     supabase
       .from("bookings")
-      .select(
-        `
-        id,
-        trip:trips!inner (
-          planned_departure_time
-        )
-      `,
-        { count: "exact", head: true },
-      )
+      .select("id", { count: "exact", head: true })
       .eq("status", "pending")
-      .gte("trips.planned_departure_time", startISO)
-      .lte("trips.planned_departure_time", endISO),
+      .gte("requested_departure_time", startISO)
+      .lte("requested_departure_time", endISO),
   ]);
 
   if (totalTripsResult.error) throw totalTripsResult.error;
@@ -190,12 +177,14 @@ export async function getRunningTrips(date: Date): Promise<RunningTrip[]> {
   }));
 }
 
-export async function getPendingBookings2() {
+/** Khách trong ngày (pending trước, confirmed sau) theo requested_departure_time. */
+export async function getPendingBookings2(date: Date) {
+  const { startISO, endISO } = getDayRange(date);
   try {
     const { data, error } = await supabase.functions.invoke(
-      "getPendingBookings",
+      "get-pending-bookings",
       {
-        body: { name: "Functions" },
+        body: { start: startISO, end: endISO },
       },
     );
     if (error) throw error;

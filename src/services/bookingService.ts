@@ -106,6 +106,20 @@ export async function searchCustomers(
   return data ?? [];
 }
 
+/** Autocomplete ô SĐT trong form đặt vé: chỉ khớp theo số điện thoại. */
+export async function searchCustomersByPhone(
+  query: string,
+  limit = 5,
+): Promise<Customer[]> {
+  const { data, error } = await supabase
+    .from("customers")
+    .select("id, full_name, phone, note")
+    .ilike("phone", `%${query}%`)
+    .limit(limit);
+  if (error) throw error;
+  return data ?? [];
+}
+
 export interface CreateBookingInput {
   // Khách mới: name/phone/note. Khách đã có: customer_id.
   customer_id?: string;
@@ -125,11 +139,24 @@ export async function createBooking(input: CreateBookingInput): Promise<void> {
   try {
     await edgeFunctionClient.post("/create-booking", input);
   } catch (err: unknown) {
-    const message = axios.isAxiosError(err)
-      ? (err.response?.data?.error ?? err.message)
-      : err instanceof Error
-      ? err.message
-      : "Có lỗi xảy ra";
-    throw new Error(message, { cause: err });
+    throw new Error(edgeErrorMessage(err), { cause: err });
   }
+}
+
+// Hủy booking qua Edge Function (đổi status + nhả ghế phải đi cùng nhau).
+// Server chặn hủy khi chuyến đã khởi hành (khách đã được đón) — trả 409.
+export async function cancelBooking(bookingId: string): Promise<void> {
+  try {
+    await edgeFunctionClient.post("/cancel-booking", { booking_id: bookingId });
+  } catch (err: unknown) {
+    throw new Error(edgeErrorMessage(err), { cause: err });
+  }
+}
+
+function edgeErrorMessage(err: unknown): string {
+  return axios.isAxiosError(err)
+    ? (err.response?.data?.error ?? err.message)
+    : err instanceof Error
+    ? err.message
+    : "Có lỗi xảy ra";
 }

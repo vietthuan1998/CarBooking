@@ -27,7 +27,8 @@ Không có test. Env: `.env.local` cần `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUB
 
 ```
 src/
-  App.tsx                 # Routes: /login /signup public; / → AdminLayout (dashboard|dispatch|vehicles|drivers|bookings|reports|accounts)
+  App.tsx                 # Routes: / (LandingPage public) /login /signup; layout route pathless → AdminLayout (/dashboard|/dispatch|/vehicles|/drivers|/bookings|/reports|/accounts)
+  pages/LandingPage.tsx   # public: giới thiệu dịch vụ + form đăng ký chuyến với ngày giờ TỰ DO (edge fn register-booking → booking pending source=online, trip_id null, staff xếp xe sau)
   app/layout.tsx          # AdminLayout: Sidebar + <Outlet/>, responsive collapse
   stores/authStore.ts     # Zustand: user/profile/isLoading; initializeAuth() subscribe onAuthStateChange
   utils/
@@ -39,7 +40,8 @@ src/
     authService.ts        # signIn/signUp/signOut/getCurrentProfile; type Profile {role: admin|staff|driver, status}
     accountService.ts     # getProfiles, updateProfile, createAccount (qua edge fn create-account)
     vehicleService.ts     # CRUD vehicles (join driver:profiles); type VehicleStatus gồm 'pending'
-    bookingService.ts     # getTripSeatsWithBookings, getActiveRoutes, getTripsByDate, searchCustomers, createBooking (edge fn, ném Error message VN)
+    bookingService.ts     # getTripSeatsWithBookings, getActiveRoutes, getTripsByDate, searchCustomers(ByPhone), createBooking/cancelBooking (edge fn, ném Error message VN)
+    landingService.ts     # registerBooking qua edge fn công khai register-booking (giờ đi tự do, trip_id null)
     dashboardService.ts   # getDashboardStats/getUpcomingTrips/getRunningTrips/getPendingBookings2 (edge fn)
     dispatchService.ts    # getActiveRoutes/Vehicles/Drivers, getTripsByDate, scheduleTrip (edge fn, ném Error message VN), updateTripStatus, deleteTrip (map FK 23503)
     reportService.ts      # getReportOverview, getVehiclePerformance (aggregate client-side)
@@ -52,7 +54,7 @@ src/
   features/*/types.ts     # types theo domain (booking, dispatch, dashboard, vehicles=StatusFilter, accounts=RoleFilter, car=SeatPosition)
   components/
     auth/                 # ProtectedRoute (chặn nếu !active hoặc role ∉ {admin,staff}), PublicRoute
-    booking/              # BookingsHeader/Body, TripColumn, TripCard, SeatPicker, CustomerSearch (debounce 300ms ilike), CustomerForm, TripBookingForm, SeatBookingInfoForm (xem booking của ghế đã đặt), Toast
+    booking/              # BookingsHeader/Body, TripColumn, TripCard, SeatPicker, CustomerForm (ô SĐT autocomplete debounce 300ms theo phone; chọn khách → link customer_id, sửa SĐT/tên → bỏ link), TripBookingForm, SeatBookingInfoForm (xem booking của ghế đã đặt), Toast
     car/                  # CarTopView + Seat (SVG xe nhìn từ trên), SeatLayout.ts (toạ độ 4/7 chỗ, seat 1 = tài xế)
     dispatch/             # Timeline + TimeAxis + TripBlock (timeline theo xe), RegisterPanel (đăng ký giờ hàng loạt), SelectedTripBar (đổi status/xóa trip)
     vehicles/, accounts/, dashboard/, reports/  # header + filter bar + table + modal per domain
@@ -73,12 +75,20 @@ supabase/
     20260707120000*                  # trigger chặn driver đổi seat_count (with check self-ref gây recursion — xem comment); driver DELETE xe pending
     20260708034959*                  # signup chờ duyệt: handle_new_user đọc status từ raw_APP_meta_data, default 'inactive'
     20260708120000*                  # bỏ trips.driver_id + trip_driver_logs; "chuyến của driver" = chuyến dùng xe mình đứng tên (helper owns_vehicle SECURITY DEFINER)
-  functions/              # Deno edge functions, service_role bypass RLS (trừ getPendingBookings dùng JWT user)
+    20260709000000*                  # profiles.email (mirror auth.users, backfill + handle_new_user; trigger chặn client sửa)
+    20260709010000*                  # normalize profiles.phone '' → NULL (trigger, phone unique nên '' đụng nhau)
+    20260709020000*                  # policy tự update profile khóa thêm status (driver inactive không tự mở khóa được)
+    20260709030000*                  # bookings.seat_count + bookings.note (đăng ký online từ landing)
+    20260709040000*                  # anon SELECT routes active (landing load tuyến bằng anon key)
+    20260709050000*                  # bookings.trip_id nullable + requested_departure_time (khách chọn giờ tự do, staff xếp xe sau; backfill từ trips)
+  functions/              # Deno edge functions, service_role bypass RLS (trừ get-pending-bookings dùng JWT user); tên phải kebab-case/lowercase — CLI (Viper) lowercase key trong config.toml, tên camelCase sẽ bị deploy thành 2 function
     create-booking/       # index.ts orchestrate; lib/: validate → customer (upsert theo phone) → trip (check bookable+ghế) → route → booking (insert + markSeatsBooked + log)
     schedule-trip/        # tạo trip: check gap ≥150p giữa 2 chuyến cùng xe + check vị trí xe (dest chuyến trước = origin chuyến mới); cần đọc trực tiếp khi sửa
     create-account/       # verify caller là admin active → auth.admin.createUser + update profile sang active (trigger tạo profile 'inactive')
     reset-password/       # đặt mật khẩu mặc định theo role đích (driver 123456, staff 111111, admin @dmin123); admin reset tất cả, staff chỉ mình+driver
-    getPendingBookings/   # bookings pending hôm nay, dùng anon key + JWT user (RLS áp dụng)
+    get-pending-bookings/ # "khách trong ngày": bookings pending+confirmed theo requested_departure_time (client gửi start/end local), pending xếp trước; anon key + JWT user (RLS áp dụng)
+    register-booking/     # CÔNG KHAI (verify_jwt=false): khách đăng ký với NGÀY GIỜ TỰ DO → booking pending source=online, trip_id=NULL (staff xếp xe sau); không overwrite tên khách cũ; chặn giờ quá khứ/quá 60 ngày
+    cancel-booking/       # verify caller admin/staff → hủy booking + nhả trip_seats; chặn khi trip không còn 'scheduled' (khách đã được đón)
   seed.sql                # 4 routes + admin admin@admin.com / @dmin123 (hash bằng crypt() lúc seed)
 ```
 
@@ -104,7 +114,7 @@ Root: `drizzle.config.ts` + devDep `drizzle-kit` là setup dở dang (schema.ts 
 - `routes(origin, destination, base_price)`, `customers(phone unique, không có auth)`.
 - `trips(trip_code unique, planned/actual_departure_time, trip_status scheduled|in_progress|completed|cancelled)` — trigger tự populate `trip_seats` (status available|locked|booked, locked_until có nhưng client chưa dùng lock). **Không có cột driver_id** (bỏ ở 20260708120000): tài xế của chuyến = chủ xe (`vehicles.driver_id`), client embed driver qua `vehicle:vehicles(driver:profiles(...))`.
 - `bookings(booking_code, customer_id, trip_id, route_id, fare_amount, status pending|confirmed|cancelled|completed)` — trigger log vào `booking_status_logs`.
-- RLS: helper `get_my_role()`/`is_admin_or_staff()`/`owns_vehicle()` (SECURITY DEFINER). Admin/staff full access; driver chỉ đọc dữ liệu chuyến chạy bằng xe mình đứng tên + update trip_status + tự đăng ký xe pending. Anon chỉ SELECT routes.
+- RLS: helper `get_my_role()`/`is_admin_or_staff()`/`owns_vehicle()` (SECURITY DEFINER). Admin/staff full access; driver chỉ đọc dữ liệu chuyến chạy bằng xe mình đứng tên + update trip_status + tự đăng ký xe pending. Anon chỉ SELECT routes `status='active'` (policy `to anon`, migration 20260709040000 — trước đó anon không đọc được gì, landing nhận mảng rỗng).
 
 ## Luồng dữ liệu chính
 
@@ -134,4 +144,4 @@ Root: `drizzle.config.ts` + devDep `drizzle-kit` là setup dở dang (schema.ts 
 - Không gọi setState của component khác trong updater function (xem comment trong `useTripBooking.handleSeatClick`).
 - Naming DB: `trips.planned_departure_time` (không phải `departure_time`), `trip_status` (không phải `status`).
 - RLS policy có subquery self-reference phải alias bảng con (bug 21000 đã fix ở migration 20260706022643).
-- `booking_source ∈ {manual, phone, online}`, hiện luôn `manual`; booking mới luôn `status=pending`.
+- `booking_source ∈ {manual, phone, online}`: staff đặt qua BookingsPage = `manual` + `status=confirmed` + trip_id (đã chốt ghế); khách đăng ký landing = `online` + `status=pending` + **trip_id NULL** (chọn ngày giờ tự do, chưa giữ ghế). `requested_departure_time` = giờ khách muốn (online) hoặc giờ chuyến (manual) — dashboard/stats lọc "trong ngày" trên cột này, KHÔNG join trips (sẽ bỏ sót booking chưa xếp xe). Staff xử lý pending: đặt ghế thật trên BookingsPage rồi hủy bản pending trên dashboard (nút Hủy → edge fn cancel-booking; trip NULL hủy tự do, có trip thì phải còn 'scheduled').

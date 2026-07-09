@@ -1,10 +1,49 @@
 // src/features/dispatch/components/Timeline.tsx
-import { getRouteColumn, timelinePercent } from "@/utils/helpers";
+import { getRouteColumn, minutesOfDay, timelinePercent } from "@/utils/helpers";
+import {
+  TIMELINE_BLOCK_MINUTES,
+  TIMELINE_DAY_END,
+  TIMELINE_DAY_START,
+} from "@/utils/constants";
 import type { Trip, Vehicle } from "../../features/dispatch/types";
 import { TimeAxis } from "./TimeAxis";
 import { TripBlock } from "./TripBlock";
 
-const HOUR_GRID_MARKS = [8, 11, 14, 17];
+/**
+ * Khung giờ hiển thị: mặc định 05:00-20:00, tự giãn (làm tròn theo giờ)
+ * khi có chuyến ngoài khung để block không văng ra ngoài trục.
+ */
+function timelineRange(trips: Trip[]) {
+  const starts = trips.map((t) => minutesOfDay(t.planned_departure_time));
+  const dayStart = Math.min(
+    TIMELINE_DAY_START,
+    ...starts.map((m) => Math.floor(m / 60) * 60),
+  );
+  // Cap 24:00: block của chuyến sát nửa đêm sẽ được TripBlock clamp vào trong
+  const dayEnd = Math.min(
+    24 * 60,
+    Math.max(
+      TIMELINE_DAY_END,
+      ...starts.map((m) => Math.ceil((m + TIMELINE_BLOCK_MINUTES) / 60) * 60),
+    ),
+  );
+  return { dayStart, dayEnd, daySpan: dayEnd - dayStart };
+}
+
+/** Mốc giờ trên trục: chia đều ~5 khoảng, luôn có mốc đầu và cuối khung. */
+function hourMarks(dayStart: number, dayEnd: number): number[] {
+  const startHour = dayStart / 60;
+  const endHour = dayEnd / 60;
+  const step = Math.max(1, Math.round((endHour - startHour) / 5));
+  const marks: number[] = [];
+  for (let h = startHour; h <= endHour; h += step) marks.push(h);
+  const last = marks[marks.length - 1];
+  if (last < endHour) {
+    if (endHour - last < step / 2) marks[marks.length - 1] = endHour;
+    else marks.push(endHour);
+  }
+  return marks;
+}
 
 interface TimelineProps {
   trips: Trip[];
@@ -24,6 +63,8 @@ export function Timeline({
   const rows = vehicles.filter((v) =>
     trips.some((t) => t.vehicle_id === v.id)
   );
+  const { dayStart, daySpan, dayEnd } = timelineRange(trips);
+  const marks = hourMarks(dayStart, dayEnd);
 
   return (
     <div className="rounded-xl border border-gray-200 bg-white">
@@ -61,7 +102,7 @@ export function Timeline({
         : (
           <div className="max-h-96 overflow-y-auto p-4 pt-0">
             <div className="sticky top-0 z-10 bg-white pt-4">
-              <TimeAxis />
+              <TimeAxis marks={marks} dayStart={dayStart} daySpan={daySpan} />
             </div>
             {rows.map((v) => (
               <div
@@ -76,12 +117,12 @@ export function Timeline({
                     {v.plate_number}
                   </div>
                 </div>
-                <div className="relative h-9 flex-1 rounded-lg bg-gray-50">
-                  {HOUR_GRID_MARKS.map((h) => (
+                <div className="relative h-9 flex-1 overflow-hidden rounded-lg bg-gray-50">
+                  {marks.slice(1, -1).map((h) => (
                     <div
                       key={h}
                       className="absolute bottom-0 top-0 w-px bg-gray-200"
-                      style={{ left: `${timelinePercent(h * 60)}%` }}
+                      style={{ left: `${timelinePercent(h * 60, dayStart, daySpan)}%` }}
                     />
                   ))}
                   {trips
@@ -93,6 +134,8 @@ export function Timeline({
                         direction={getRouteColumn(t.routes)}
                         conflict={conflictIds.has(t.id)}
                         selected={t.id === selectedTripId}
+                        dayStart={dayStart}
+                        daySpan={daySpan}
                         onClick={() => onSelect(t.id)}
                       />
                     ))}

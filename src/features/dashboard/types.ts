@@ -54,18 +54,26 @@ export type PendingBooking = {
   pickup_address: string;
   dropoff_address: string;
   fare_amount: number;
+  // Số ghế khách muốn + ghi chú lần đặt (booking online từ landing page)
+  seat_count: number | null;
+  note: string | null;
   status: string;
+  booking_source: string;
+  // Giờ khách muốn đi (online) hoặc giờ chuyến (staff đặt) — cột lọc chung
+  requested_departure_time: string | null;
   created_at: string | null;
   customer: {
     full_name: string;
     phone: string;
   } | null;
+  route: {
+    route_name: string;
+    origin: string;
+    destination: string;
+  } | null;
+  // NULL khi booking online chưa được xếp xe
   trip: {
-    planned_departure_time: string;
-    route: {
-      route_name: string;
-      origin: string;
-      destination: string;
-    } | null;
+    trip_code: string;
+    trip_status: string;
   } | null;
 };

@@ -19,6 +19,7 @@ export function useDashboard(selectedDate: Date) {
   const [pendingBookings, setPendingBookings] = useState<PendingBooking[]>([]);
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
+  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
     let isMounted = true;
@@ -33,7 +34,7 @@ export function useDashboard(selectedDate: Date) {
             getDashboardStats(selectedDate),
             getUpcomingTrips(selectedDate),
             getRunningTrips(selectedDate),
-            getPendingBookings2(),
+            getPendingBookings2(selectedDate),
           ]);
 
         if (!isMounted) return;
@@ -58,7 +59,7 @@ export function useDashboard(selectedDate: Date) {
     return () => {
       isMounted = false;
     };
-  }, [selectedDate]);
+  }, [selectedDate, reloadKey]);
 
   return {
     stats,
@@ -67,5 +68,6 @@ export function useDashboard(selectedDate: Date) {
     pendingBookings,
     loading,
     errorMessage,
+    refresh: () => setReloadKey((k) => k + 1),
   };
 }

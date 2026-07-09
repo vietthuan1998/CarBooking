@@ -16,7 +16,7 @@ export function DeleteVehicleModal({
 }: Props) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4 backdrop-blur-sm">
-      <div className="w-full max-w-sm rounded-3xl bg-white shadow-2xl">
+      <div className="max-h-full w-full max-w-sm overflow-y-auto rounded-3xl bg-white shadow-2xl">
         <div className="p-6">
           <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-red-50">
             <Trash2 size={22} className="text-red-600" />

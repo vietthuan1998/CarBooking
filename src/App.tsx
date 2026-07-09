@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { Routes, Route, Navigate } from "react-router-dom";
+import { Routes, Route } from "react-router-dom";
 import { useAuthStore } from "@/stores/authStore";
 import LoginPage from "./pages/auth/LoginPage";
 import AdminLayout from "./app/layout";
@@ -15,10 +15,14 @@ import BookingsPage from "./pages/admin/BookingsPage";
 
 import PublicRoute from "./components/auth/PublicRoute";
 import ReportsPage from "./pages/admin/ReportsPage";
+import LandingPage from "./pages/LandingPage";
 
 function AppContent() {
   return (
     <Routes>
+      {/* Landing công khai: giới thiệu dịch vụ + khách tự đăng ký chuyến */}
+      <Route path="/" element={<LandingPage />} />
+
       <Route
         path="/login"
         element={
@@ -36,15 +40,14 @@ function AppContent() {
         }
       />
 
+      {/* Khu quản trị: layout route không có path để giữ nguyên URL /dashboard... */}
       <Route
-        path="/"
         element={
           <ProtectedRoute>
             <AdminLayout />
           </ProtectedRoute>
         }
       >
-        <Route index element={<Navigate to="/dashboard" replace />} />
         <Route path="dashboard" element={<DashboardPage />} />
         <Route path="dispatch" element={<DispatchPage />} />
         <Route path="vehicles" element={<VehiclesPage />} />

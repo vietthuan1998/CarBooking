@@ -11,6 +11,7 @@ export async function insertBooking(
   request: ValidatedBookingRequest,
   customerId: string,
   fareAmount: number,
+  plannedDepartureTime: string,
 ) {
   const { data: booking, error } = await supabase
     .from("bookings")
@@ -19,11 +20,17 @@ export async function insertBooking(
       customer_id: customerId,
       trip_id: request.trip_id,
       route_id: request.route_id,
+      // = giờ chuyến, để dashboard lọc "khách trong ngày" trên 1 cột chung
+      // với booking online (vốn không có trip)
+      requested_departure_time: plannedDepartureTime,
       pickup_address: request.pickup_address,
       dropoff_address: request.dropoff_address,
       fare_amount: fareAmount,
+      seat_count: request.seat_ids.length,
       booking_source: "manual",
-      status: "pending",
+      // Staff đặt ghế trực tiếp = đã chốt với khách → confirmed luôn.
+      // Booking pending chỉ đến từ khách tự đăng ký (edge fn register-booking).
+      status: "confirmed",
     })
     .select()
     .single();
@@ -56,6 +63,6 @@ export async function logBookingCreated(
   await supabase.from("booking_status_logs").insert({
     booking_id: bookingId,
     old_status: null,
-    new_status: "pending",
+    new_status: "confirmed",
   });
 }

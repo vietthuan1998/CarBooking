@@ -102,12 +102,16 @@ Deno.serve(async (req: Request) => {
     if (!password || password.length < 6) {
       return json({ error: "Mật khẩu phải có ít nhất 6 ký tự" }, 400);
     }
-    if (!fullName) return json({ error: "Thiếu họ và tên" }, 400);
     if (!VALID_ROLES.includes(role)) {
       return json(
         { error: "role phải là một trong: " + VALID_ROLES.join(", ") },
         400,
       );
+    }
+    // Driver được phép trống tên: account tạo chỉ với email + mật khẩu,
+    // driver tự cập nhật thông tin sau trên app mobile.
+    if (!fullName && role !== "driver") {
+      return json({ error: "Thiếu họ và tên" }, 400);
     }
 
     // ---- Tạo user trong auth.users ----

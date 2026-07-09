@@ -118,7 +118,7 @@ export default function SignupPage() {
 
   const openEdit = (p: Profile) => {
     setForm({
-      email: "",
+      email: p.email ?? "",
       password: "",
       full_name: p.full_name,
       phone: p.phone ?? "",
@@ -129,7 +129,9 @@ export default function SignupPage() {
   };
 
   const handleSave = async () => {
-    if (!form.full_name.trim()) {
+    // Driver được phép trống tên: account có thể tạo chỉ với email + mật
+    // khẩu, driver tự cập nhật thông tin sau trên app mobile.
+    if (!form.full_name.trim() && form.role !== "driver") {
       setFormError("Vui lòng nhập họ và tên");
       return;
     }
@@ -152,13 +154,13 @@ export default function SignupPage() {
           email: form.email.trim(),
           password: form.password,
           full_name: form.full_name.trim(),
-          phone: form.phone.trim(),
+          phone: form.phone.trim() || null,
           role: form.role,
         });
       } else if (modal?.account) {
         const updates: Parameters<typeof updateProfile>[1] = {
           full_name: form.full_name.trim(),
-          phone: form.phone.trim(),
+          phone: form.phone.trim() || null,
         };
         if (canEditRole(modal.account)) {
           updates.role = form.role;

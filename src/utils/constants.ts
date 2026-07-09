@@ -28,8 +28,9 @@ export const DEFAULT_RESET_PASSWORDS: Record<
 };
 
 // ---- Timeline điều phối xe ----
+// Khung mặc định 05:00-20:00; Timeline tự giãn khi có chuyến ngoài khung
 export const TIMELINE_DAY_START = 5 * 60; // 05:00
-const TIMELINE_DAY_END = 20 * 60; // 20:00
+export const TIMELINE_DAY_END = 20 * 60; // 20:00
 export const TIMELINE_DAY_SPAN = TIMELINE_DAY_END - TIMELINE_DAY_START;
 export const TIMELINE_BLOCK_MINUTES = 120; // độ rộng khối hiển thị (không phải thời lượng thực)
 // Khoảng nghỉ tối thiểu giữa 2 chuyến cùng xe — đồng bộ với MIN_GAP_MINUTES

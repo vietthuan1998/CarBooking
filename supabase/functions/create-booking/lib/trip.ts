@@ -4,6 +4,7 @@ import { HttpError, orThrow500 } from "./http.ts";
 interface TripWithRoute {
   id: string;
   trip_status: string;
+  planned_departure_time: string;
   route: { origin: string; destination: string } | null;
 }
 
@@ -13,7 +14,7 @@ export async function assertTripBookable(
 ): Promise<TripWithRoute> {
   const { data: trip, error } = await supabase
     .from("trips")
-    .select("id, trip_status, route:routes(origin, destination)")
+    .select("id, trip_status, planned_departure_time, route:routes(origin, destination)")
     .eq("id", tripId)
     .maybeSingle();
 

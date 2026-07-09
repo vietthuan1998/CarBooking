@@ -1,7 +1,7 @@
 // src/features/dispatch/components/TripBlock.tsx
 import type { RouteColumn } from "@/utils/helpers";
 import { formatTime, minutesOfDay, timelinePercent } from "@/utils/helpers";
-import { TIMELINE_BLOCK_MINUTES, TIMELINE_DAY_SPAN } from "@/utils/constants";
+import { TIMELINE_BLOCK_MINUTES } from "@/utils/constants";
 import type { Trip } from "../../features/dispatch/types";
 
 interface TripBlockProps {
@@ -9,6 +9,8 @@ interface TripBlockProps {
   direction: RouteColumn;
   conflict: boolean;
   selected: boolean;
+  dayStart: number;
+  daySpan: number;
   onClick: () => void;
 }
 
@@ -17,10 +19,24 @@ export function TripBlock({
   direction,
   conflict,
   selected,
+  dayStart,
+  daySpan,
   onClick,
 }: TripBlockProps) {
-  const left = timelinePercent(minutesOfDay(trip.planned_departure_time));
-  const width = (TIMELINE_BLOCK_MINUTES / TIMELINE_DAY_SPAN) * 100;
+  const width = (TIMELINE_BLOCK_MINUTES / daySpan) * 100;
+  // Clamp để block luôn nằm gọn trong track (chuyến sát nửa đêm bị đẩy lùi
+  // vào trong một chút thay vì tràn ra ngoài trục)
+  const left = Math.max(
+    0,
+    Math.min(
+      100 - width,
+      timelinePercent(
+        minutesOfDay(trip.planned_departure_time),
+        dayStart,
+        daySpan,
+      ),
+    ),
+  );
   const palette = direction === "from-hue"
     ? "bg-teal-100 text-teal-800 border-teal-500"
     : "bg-violet-100 text-violet-800 border-violet-500";

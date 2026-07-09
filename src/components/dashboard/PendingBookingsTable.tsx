@@ -1,18 +1,34 @@
+import { useState } from "react";
 import { formatDateTime } from "@/utils/helpers";
 import type { PendingBooking } from "../../features/dashboard/types";
 
 type Props = {
   bookings: PendingBooking[];
+  onCancel: (booking: PendingBooking) => Promise<void>;
 };
 
-export function PendingBookingsTable({ bookings }: Props) {
+export function PendingBookingsTable({ bookings, onCancel }: Props) {
+  const [cancellingId, setCancellingId] = useState<string | null>(null);
+
+  const handleCancel = async (booking: PendingBooking) => {
+    setCancellingId(booking.id);
+    try {
+      await onCancel(booking);
+    } finally {
+      setCancellingId(null);
+    }
+  };
+
   return (
     <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
       <div className="mb-5 flex items-center justify-between gap-4">
         <h2 className="text-lg font-semibold text-slate-900">
-          Booking chờ xử lý
+          Khách trong ngày
         </h2>
-        <button type="button" className="text-sm font-medium text-slate-500 transition hover:text-slate-700">
+        <button
+          type="button"
+          className="text-sm font-medium text-slate-500 transition hover:text-slate-700"
+        >
           Xem tất cả
         </button>
       </div>
@@ -34,10 +50,19 @@ export function PendingBookingsTable({ bookings }: Props) {
                 Tuyến
               </th>
               <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-slate-500">
-                Ngày đi
+                Giờ đi
+              </th>
+              <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide text-slate-500">
+                Ghế
+              </th>
+              <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                Ghi chú
               </th>
               <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-slate-500">
                 Trạng thái
+              </th>
+              <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-500">
+                Thao tác
               </th>
             </tr>
           </thead>
@@ -45,38 +70,80 @@ export function PendingBookingsTable({ bookings }: Props) {
             {bookings.length === 0 ? (
               <tr>
                 <td
-                  colSpan={6}
+                  colSpan={9}
                   className="px-4 py-8 text-center text-sm font-medium text-slate-500"
                 >
                   Chưa có booking nào
                 </td>
               </tr>
             ) : (
-              bookings.map((booking) => (
-                <tr key={booking.id} className="hover:bg-slate-50">
-                  <td className="whitespace-nowrap px-4 py-4 text-sm font-semibold text-slate-900">
-                    {booking.booking_code}
-                  </td>
-                  <td className="whitespace-nowrap px-4 py-4 text-sm text-slate-600">
-                    {booking.customer?.full_name}
-                  </td>
-                  <td className="whitespace-nowrap px-4 py-4 text-sm text-slate-600">
-                    {booking.customer?.phone}
-                  </td>
-                  <td className="whitespace-nowrap px-4 py-4 text-sm text-slate-600">
-                    {booking.trip?.route?.origin} →{" "}
-                    {booking.trip?.route?.destination}
-                  </td>
-                  <td className="whitespace-nowrap px-4 py-4 text-sm text-slate-600">
-                    {formatDateTime(booking.trip?.planned_departure_time)}
-                  </td>
-                  <td className="whitespace-nowrap px-4 py-4">
-                    <span className="inline-flex rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-amber-700">
-                      {booking.status}
-                    </span>
-                  </td>
-                </tr>
-              ))
+              bookings.map((booking) => {
+                // Chưa xếp xe (trip null) thì hủy thoải mái; đã gắn chuyến
+                // thì chỉ hủy khi chuyến chưa khởi hành (khách chưa được đón)
+                const cancellable =
+                  !booking.trip || booking.trip.trip_status === "scheduled";
+                const pending = booking.status === "pending";
+                return (
+                  <tr key={booking.id} className="hover:bg-slate-50">
+                    <td className="whitespace-nowrap px-4 py-4 text-sm font-semibold text-slate-900">
+                      {booking.booking_code}
+                    </td>
+                    <td className="whitespace-nowrap px-4 py-4 text-sm text-slate-600">
+                      {booking.customer?.full_name}
+                    </td>
+                    <td className="whitespace-nowrap px-4 py-4 text-sm text-slate-600">
+                      {booking.customer?.phone}
+                    </td>
+                    <td className="whitespace-nowrap px-4 py-4 text-sm text-slate-600">
+                      {booking.route?.origin} → {booking.route?.destination}
+                    </td>
+                    <td className="whitespace-nowrap px-4 py-4 text-sm text-slate-600">
+                      {formatDateTime(booking.requested_departure_time)}
+                      {!booking.trip && (
+                        <span className="ml-2 rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-500">
+                          chưa xếp xe
+                        </span>
+                      )}
+                    </td>
+                    <td className="whitespace-nowrap px-4 py-4 text-center text-sm text-slate-600">
+                      {booking.seat_count ?? "—"}
+                    </td>
+                    <td
+                      className="max-w-48 truncate px-4 py-4 text-sm text-slate-600"
+                      title={booking.note ?? undefined}
+                    >
+                      {booking.note ?? "—"}
+                    </td>
+                    <td className="whitespace-nowrap px-4 py-4">
+                      <span
+                        className={[
+                          "inline-flex rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wide",
+                          pending
+                            ? "bg-amber-100 text-amber-700"
+                            : "bg-emerald-100 text-emerald-700",
+                        ].join(" ")}
+                      >
+                        {pending ? "Chờ xử lý" : "Đã xác nhận"}
+                      </span>
+                    </td>
+                    <td className="whitespace-nowrap px-4 py-4 text-right">
+                      <button
+                        type="button"
+                        disabled={!cancellable || cancellingId === booking.id}
+                        onClick={() => handleCancel(booking)}
+                        title={
+                          cancellable
+                            ? "Hủy booking này"
+                            : "Chuyến đã khởi hành — khách đã được đón, không thể hủy"
+                        }
+                        className="rounded-xl border border-red-200 px-3 py-1.5 text-xs font-medium text-red-600 transition-colors hover:bg-red-50 disabled:cursor-not-allowed disabled:border-slate-200 disabled:text-slate-300 disabled:hover:bg-transparent"
+                      >
+                        {cancellingId === booking.id ? "Đang hủy..." : "Hủy"}
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })
             )}
           </tbody>
         </table>

@@ -1,6 +1,7 @@
 import { KeyRound } from "lucide-react";
 import type { Profile } from "../../services/accountService";
 import { DEFAULT_RESET_PASSWORDS } from "../../utils/constants";
+import { displayName } from "../../utils/helpers";
 
 interface Props {
   account: Profile;
@@ -17,7 +18,7 @@ export function ResetPasswordModal({
 }: Props) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4 backdrop-blur-sm">
-      <div className="w-full max-w-sm rounded-3xl bg-white shadow-2xl">
+      <div className="max-h-full w-full max-w-sm overflow-y-auto rounded-3xl bg-white shadow-2xl">
         <div className="p-6">
           <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-50">
             <KeyRound size={22} className="text-amber-600" />
@@ -28,7 +29,7 @@ export function ResetPasswordModal({
           <p className="text-sm text-slate-500">
             Mật khẩu của{" "}
             <span className="font-semibold text-slate-800">
-              {account.full_name}
+              {displayName(account.full_name)}
             </span>{" "}
             sẽ được đặt lại về{" "}
             <span className="rounded bg-slate-100 px-1.5 py-0.5 font-mono font-semibold text-slate-800">

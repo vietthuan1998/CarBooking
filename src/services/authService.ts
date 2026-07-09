@@ -31,7 +31,8 @@ export async function signUp(
       options: {
         data: {
           full_name: fullName,
-          phone,
+          // "" → null: phone unique ở profiles, '' đụng nhau còn NULL thì không
+          phone: phone.trim() || null,
         },
       },
     });
@@ -159,6 +160,8 @@ export interface Profile {
   id: string;
   full_name: string;
   phone: string | null;
+  /** Mirror từ auth.users qua trigger handle_new_user, chỉ để hiển thị. */
+  email: string | null;
   role: "admin" | "staff" | "driver";
   status: "active" | "inactive";
   created_at: string;
