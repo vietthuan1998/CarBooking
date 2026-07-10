@@ -4,6 +4,9 @@
 //
 // Input (JSON body):
 // {
+//   "booking_id": "uuid",            // GÁN booking online pending vào chuyến
+//                                     //   (bỏ qua customer_* — khách đã có sẵn)
+//   // HOẶC tạo booking mới:
 //   "customer_id": "uuid",           // khách đã có trong hệ thống
 //   // HOẶC:
 //   "customer_name": "Nguyễn Văn A", // khách mới
@@ -18,64 +21,82 @@
 //                                      // fare_amount = routes.base_price * số ghế
 // }
 
-import { createClient } from "jsr:@supabase/supabase-js@2";
-import { corsHeaders, HttpError, json } from "./lib/http.ts";
+import { createAdminClient } from "../_shared/adminClient.ts";
+import { verifyCaller } from "../_shared/verifyCaller.ts";
+import { json, servePost } from "../_shared/http.ts";
 import { validateBookingRequest } from "./lib/validate.ts";
 import { resolveCustomerId } from "./lib/customer.ts";
 import { assertTripBookable, getAvailableTripSeats } from "./lib/trip.ts";
 import { resolveBookingRoute } from "./lib/route.ts";
 import {
+  assignBookingToTrip,
   insertBooking,
+  loadPendingBooking,
   logBookingCreated,
   markSeatsBooked,
+  revertBookingAssignment,
 } from "./lib/booking.ts";
 
-Deno.serve(async (req: Request) => {
-  if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
-  }
-  if (req.method !== "POST") return json({ error: "Method not allowed" }, 405);
+servePost(async (req: Request) => {
+  const supabase = createAdminClient();
 
-  try {
-    const supabase = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
-    );
+  // Service role bypass RLS → phải tự chặn người gọi không phải admin/staff.
+  const caller = await verifyCaller(
+    req,
+    supabase,
+    ["admin", "staff"],
+    "Chỉ admin/staff mới có quyền đặt vé",
+  );
+  if (!caller.ok) return json({ error: caller.message }, caller.status);
 
-    const body = await req.json().catch(() => null);
-    if (!body) return json({ error: "Request body không hợp lệ" }, 400);
-    const request = validateBookingRequest(body);
+  const body = await req.json().catch(() => null);
+  if (!body) return json({ error: "Request body không hợp lệ" }, 400);
+  const request = validateBookingRequest(body);
 
-    const customerId = await resolveCustomerId(supabase, request);
+  const trip = await assertTripBookable(supabase, request.trip_id);
+  const tripSeats = await getAvailableTripSeats(
+    supabase,
+    request.trip_id,
+    request.seat_ids,
+  );
+  const route = await resolveBookingRoute(supabase, request.route_id, trip);
 
-    const trip = await assertTripBookable(supabase, request.trip_id);
-    const tripSeats = await getAvailableTripSeats(
+  const fareAmount = Number(route.base_price) * request.seat_ids.length;
+  const tripSeatIds = tripSeats.map((ts) => ts.id);
+
+  // ---- Luồng GÁN: booking online pending đã có khách, chỉ chốt chuyến + ghế ----
+  if (request.booking_id) {
+    const original = await loadPendingBooking(supabase, request.booking_id);
+    const booking = await assignBookingToTrip(
       supabase,
-      request.trip_id,
-      request.seat_ids,
-    );
-    const route = await resolveBookingRoute(supabase, request.route_id, trip);
-
-    const fareAmount = Number(route.base_price) * request.seat_ids.length;
-    const booking = await insertBooking(
-      supabase,
+      request.booking_id,
       request,
-      customerId,
       fareAmount,
-      trip.planned_departure_time,
     );
-
-    await markSeatsBooked(supabase, tripSeats.map((ts) => ts.id), booking.id);
-    await logBookingCreated(supabase, booking.id);
-
-    return json({ booking }, 201);
-  } catch (err) {
-    if (err instanceof HttpError) {
-      return json({ error: err.message }, err.status);
-    }
-    return json(
-      { error: err instanceof Error ? err.message : "Unknown error" },
-      500,
+    await markSeatsBooked(
+      supabase,
+      tripSeatIds,
+      booking.id,
+      () => revertBookingAssignment(supabase, original),
     );
+    // Không log tay: trigger trg_log_booking_status đã ghi pending → confirmed.
+    return json({ booking }, 200);
   }
+
+  // ---- Luồng TẠO MỚI ----
+  const customerId = await resolveCustomerId(supabase, request);
+  const booking = await insertBooking(
+    supabase,
+    request,
+    customerId,
+    fareAmount,
+    trip.planned_departure_time,
+  );
+
+  await markSeatsBooked(supabase, tripSeatIds, booking.id, async () => {
+    await supabase.from("bookings").delete().eq("id", booking.id);
+  });
+  await logBookingCreated(supabase, booking.id);
+
+  return json({ booking }, 201);
 });

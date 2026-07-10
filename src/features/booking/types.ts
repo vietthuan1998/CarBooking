@@ -54,7 +54,23 @@ export interface Customer {
   note?: string;
 }
 
+/** Booking online (pending, trip_id NULL) chờ staff xếp xe. */
+export interface PendingOnlineBooking {
+  id: string;
+  booking_code: string;
+  seat_count: number | null;
+  note: string | null;
+  requested_departure_time: string;
+  pickup_address: string;
+  dropoff_address: string;
+  route_id: string;
+  customer: { id: string; full_name: string; phone: string } | null;
+}
+
 export interface BookingForm {
+  /** Gán booking online có sẵn vào chuyến (khác "" = form ở chế độ gán). */
+  booking_id: string;
+  booking_code: string;
   customer_id: string;
   customer_name: string;
   customer_phone: string;
@@ -66,6 +82,8 @@ export interface BookingForm {
 }
 
 export const INITIAL_FORM: BookingForm = {
+  booking_id: "",
+  booking_code: "",
   customer_id: "",
   customer_name: "",
   customer_phone: "",

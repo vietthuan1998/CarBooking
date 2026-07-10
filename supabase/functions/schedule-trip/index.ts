@@ -18,267 +18,249 @@
 //
 // Tài xế của chuyến suy ra từ xe (vehicles.driver_id) — trips không còn cột driver_id.
 
-import { createClient } from "jsr:@supabase/supabase-js@2";
+import { createAdminClient } from "../_shared/adminClient.ts";
+import { verifyCaller } from "../_shared/verifyCaller.ts";
+import { json, servePost } from "../_shared/http.ts";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
-};
+servePost(async (req: Request) => {
+  // Service role: bypass RLS để check toàn bộ trips + insert,
+  // bất kể RLS của user đang gọi (vì logic check cần thấy hết dữ liệu).
+  const supabase = createAdminClient();
 
-function jsonResponse(body: unknown, status = 200) {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
-  });
-}
-
-Deno.serve(async (req: Request) => {
-  if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
+  // Service role bypass RLS → phải tự chặn người gọi không phải admin/staff.
+  const caller = await verifyCaller(
+    req,
+    supabase,
+    ["admin", "staff"],
+    "Chỉ admin/staff mới có quyền tạo chuyến xe",
+  );
+  if (!caller.ok) {
+    return json({ error: caller.message }, caller.status);
   }
 
-  if (req.method !== "POST") {
-    return jsonResponse({ error: "Method not allowed" }, 405);
-  }
+  const body = await req.json();
+  const {
+    route_id,
+    vehicle_id,
+    planned_departure_time,
+    trip_code,
+  } = body ?? {};
 
-  try {
-    const supabase = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      // Service role key: bypass RLS để check toàn bộ trips + insert,
-      // bất kể RLS của user đang gọi (vì logic check cần thấy hết dữ liệu).
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+  // ---- Validate input cơ bản ----
+  if (!route_id || !vehicle_id || !planned_departure_time) {
+    return json(
+      {
+        error:
+          "Thiếu dữ liệu bắt buộc: route_id, vehicle_id, planned_departure_time",
+      },
+      400,
     );
+  }
 
-    const body = await req.json();
-    const {
-      route_id,
-      vehicle_id,
-      planned_departure_time,
-      trip_code,
-    } = body ?? {};
+  const departureDate = new Date(planned_departure_time);
+  if (Number.isNaN(departureDate.getTime())) {
+    return json(
+      { error: "planned_departure_time không hợp lệ" },
+      400,
+    );
+  }
 
-    // ---- Validate input cơ bản ----
-    if (!route_id || !vehicle_id || !planned_departure_time) {
-      return jsonResponse(
+  // ---- Kiểm tra route & vehicle tồn tại và đang active ----
+  const { data: route, error: routeError } = await supabase
+    .from("routes")
+    .select("id, route_name, origin, destination, status")
+    .eq("id", route_id)
+    .maybeSingle();
+
+  if (routeError) {
+    return json({ error: routeError.message }, 500);
+  }
+  if (!route) {
+    return json({ error: "route_id không tồn tại" }, 404);
+  }
+
+  const { data: vehicle, error: vehicleError } = await supabase
+    .from("vehicles")
+    .select("id, vehicle_name, plate_number, status")
+    .eq("id", vehicle_id)
+    .maybeSingle();
+
+  if (vehicleError) {
+    return json({ error: vehicleError.message }, 500);
+  }
+  if (!vehicle) {
+    return json({ error: "vehicle_id không tồn tại" }, 404);
+  }
+
+  // ---- Check khoảng cách tối thiểu + trình tự vị trí xe ----
+  // Rule 1: Khoảng cách ≥ 2h30p giữa 2 chuyến liên tiếp cùng xe.
+  // Rule 2: Sau chuyến trước, xe đang ở điểm đến của chuyến đó.
+  //         Chuyến mới phải xuất phát từ đúng điểm đó.
+  //         (Ví dụ: xe 10:00 Huế→ĐN → xe đang ở ĐN → 12:31 không thể xuất phát từ Huế)
+  const MIN_GAP_MINUTES = 150; // 2h30p
+
+  const dayStart = new Date(departureDate);
+  dayStart.setHours(0, 0, 0, 0);
+  const dayEnd = new Date(departureDate);
+  dayEnd.setHours(23, 59, 59, 999);
+
+  // Lấy kèm thông tin tuyến (origin/destination) để check vị trí xe
+  const { data: existingTrips, error: existingError } = await supabase
+    .from("trips")
+    .select(
+      "id, trip_code, planned_departure_time, trip_status, route:routes(origin, destination)",
+    )
+    .eq("vehicle_id", vehicle_id)
+    .neq("trip_status", "cancelled")
+    .gte("planned_departure_time", dayStart.toISOString())
+    .lte("planned_departure_time", dayEnd.toISOString())
+    .order("planned_departure_time");
+
+  if (existingError) {
+    return json({ error: existingError.message }, 500);
+  }
+
+  const fmt = (d: Date) =>
+    d.toLocaleTimeString("vi-VN", {
+      hour: "2-digit",
+      minute: "2-digit",
+      timeZone: "Asia/Ho_Chi_Minh",
+    });
+
+  interface TripRow {
+    id: string;
+    trip_code: string;
+    planned_departure_time: string;
+    route: { origin: string; destination: string } | null;
+  }
+
+  const sorted = (existingTrips ?? []) as unknown as TripRow[];
+  const newMs = departureDate.getTime();
+
+  // Trùng giờ chính xác (cùng xe, cùng thời điểm xuất phát): phải chặn riêng
+  // vì prevTrip/nextTrip bên dưới dùng so sánh strict (<, >) nên bỏ sót ca
+  // bằng nhau — nếu không có check này, đăng ký trùng y hệt sẽ lọt qua và
+  // tạo 2 trip giống hệt nhau cho cùng 1 xe.
+  const exactDuplicate = sorted.find(
+    (t) => new Date(t.planned_departure_time).getTime() === newMs,
+  );
+  if (exactDuplicate) {
+    return json(
+      {
+        error: `Xe đã có chuyến ${exactDuplicate.trip_code} lúc ${
+          fmt(new Date(exactDuplicate.planned_departure_time))
+        } — không thể tạo chuyến trùng giờ.`,
+        conflict: exactDuplicate,
+        min_gap_minutes: MIN_GAP_MINUTES,
+      },
+      409,
+    );
+  }
+
+  // Chuyến ngay trước chuyến mới (theo thời gian)
+  const prevTrip = [...sorted]
+    .reverse()
+    .find((t) => new Date(t.planned_departure_time).getTime() < newMs);
+
+  // Chuyến ngay sau chuyến mới (theo thời gian)
+  const nextTrip = sorted.find(
+    (t) => new Date(t.planned_departure_time).getTime() > newMs,
+  );
+
+  // ── Kiểm tra so với chuyến TRƯỚC ──
+  if (prevTrip) {
+    const prevMs = new Date(prevTrip.planned_departure_time).getTime();
+    const gapMinutes = (newMs - prevMs) / (1000 * 60);
+
+    if (gapMinutes < MIN_GAP_MINUTES) {
+      const earliest = new Date(prevMs + MIN_GAP_MINUTES * 60 * 1000);
+      return json(
+        {
+          error: `Xe cần nghỉ ít nhất 2h30p giữa 2 chuyến. ` +
+            `Chuyến ${prevTrip.trip_code} lúc ${
+              fmt(new Date(prevTrip.planned_departure_time))
+            }, ` +
+            `sớm nhất có thể thêm chuyến từ ${fmt(earliest)}.`,
+          conflict: prevTrip,
+          min_gap_minutes: MIN_GAP_MINUTES,
+          earliest_allowed: earliest.toISOString(),
+        },
+        409,
+      );
+    }
+
+    // Sau chuyến trước, xe đang ở điểm đến của chuyến đó.
+    const prevDest = prevTrip.route?.destination;
+    if (prevDest && prevDest !== route.origin) {
+      return json(
+        {
+          error: `Sau chuyến ${prevTrip.trip_code}, xe đang ở ${prevDest}. ` +
+            `Không thể tạo chuyến xuất phát từ ${route.origin}.`,
+          conflict: prevTrip,
+        },
+        409,
+      );
+    }
+  }
+
+  // ── Kiểm tra so với chuyến SAU ──
+  if (nextTrip) {
+    const nextMs = new Date(nextTrip.planned_departure_time).getTime();
+    const gapMinutes = (nextMs - newMs) / (1000 * 60);
+
+    if (gapMinutes < MIN_GAP_MINUTES) {
+      return json(
         {
           error:
-            "Thiếu dữ liệu bắt buộc: route_id, vehicle_id, planned_departure_time",
-        },
-        400,
-      );
-    }
-
-    const departureDate = new Date(planned_departure_time);
-    if (Number.isNaN(departureDate.getTime())) {
-      return jsonResponse(
-        { error: "planned_departure_time không hợp lệ" },
-        400,
-      );
-    }
-
-    // ---- Kiểm tra route & vehicle tồn tại và đang active ----
-    const { data: route, error: routeError } = await supabase
-      .from("routes")
-      .select("id, route_name, origin, destination, status")
-      .eq("id", route_id)
-      .maybeSingle();
-
-    if (routeError) {
-      return jsonResponse({ error: routeError.message }, 500);
-    }
-    if (!route) {
-      return jsonResponse({ error: "route_id không tồn tại" }, 404);
-    }
-
-    const { data: vehicle, error: vehicleError } = await supabase
-      .from("vehicles")
-      .select("id, vehicle_name, plate_number, status")
-      .eq("id", vehicle_id)
-      .maybeSingle();
-
-    if (vehicleError) {
-      return jsonResponse({ error: vehicleError.message }, 500);
-    }
-    if (!vehicle) {
-      return jsonResponse({ error: "vehicle_id không tồn tại" }, 404);
-    }
-
-    // ---- Check khoảng cách tối thiểu + trình tự vị trí xe ----
-    // Rule 1: Khoảng cách ≥ 2h30p giữa 2 chuyến liên tiếp cùng xe.
-    // Rule 2: Sau chuyến trước, xe đang ở điểm đến của chuyến đó.
-    //         Chuyến mới phải xuất phát từ đúng điểm đó.
-    //         (Ví dụ: xe 10:00 Huế→ĐN → xe đang ở ĐN → 12:31 không thể xuất phát từ Huế)
-    const MIN_GAP_MINUTES = 150; // 2h30p
-
-    const dayStart = new Date(departureDate);
-    dayStart.setHours(0, 0, 0, 0);
-    const dayEnd = new Date(departureDate);
-    dayEnd.setHours(23, 59, 59, 999);
-
-    // Lấy kèm thông tin tuyến (origin/destination) để check vị trí xe
-    const { data: existingTrips, error: existingError } = await supabase
-      .from("trips")
-      .select(
-        "id, trip_code, planned_departure_time, trip_status, route:routes(origin, destination)",
-      )
-      .eq("vehicle_id", vehicle_id)
-      .neq("trip_status", "cancelled")
-      .gte("planned_departure_time", dayStart.toISOString())
-      .lte("planned_departure_time", dayEnd.toISOString())
-      .order("planned_departure_time");
-
-    if (existingError) {
-      return jsonResponse({ error: existingError.message }, 500);
-    }
-
-    const fmt = (d: Date) =>
-      d.toLocaleTimeString("vi-VN", {
-        hour: "2-digit",
-        minute: "2-digit",
-        timeZone: "Asia/Ho_Chi_Minh",
-      });
-
-    interface TripRow {
-      id: string;
-      trip_code: string;
-      planned_departure_time: string;
-      route: { origin: string; destination: string } | null;
-    }
-
-    const sorted = (existingTrips ?? []) as unknown as TripRow[];
-    const newMs = departureDate.getTime();
-
-    // Trùng giờ chính xác (cùng xe, cùng thời điểm xuất phát): phải chặn riêng
-    // vì prevTrip/nextTrip bên dưới dùng so sánh strict (<, >) nên bỏ sót ca
-    // bằng nhau — nếu không có check này, đăng ký trùng y hệt sẽ lọt qua và
-    // tạo 2 trip giống hệt nhau cho cùng 1 xe.
-    const exactDuplicate = sorted.find(
-      (t) => new Date(t.planned_departure_time).getTime() === newMs,
-    );
-    if (exactDuplicate) {
-      return jsonResponse(
-        {
-          error: `Xe đã có chuyến ${exactDuplicate.trip_code} lúc ${
-            fmt(new Date(exactDuplicate.planned_departure_time))
-          } — không thể tạo chuyến trùng giờ.`,
-          conflict: exactDuplicate,
+            `Chuyến ${nextTrip.trip_code} lúc ${
+              fmt(new Date(nextTrip.planned_departure_time))
+            } ` +
+            `chỉ cách chuyến mới ${
+              Math.round(gapMinutes)
+            } phút (cần tối thiểu 2h30p).`,
+          conflict: nextTrip,
           min_gap_minutes: MIN_GAP_MINUTES,
         },
         409,
       );
     }
 
-    // Chuyến ngay trước chuyến mới (theo thời gian)
-    const prevTrip = [...sorted]
-      .reverse()
-      .find((t) => new Date(t.planned_departure_time).getTime() < newMs);
-
-    // Chuyến ngay sau chuyến mới (theo thời gian)
-    const nextTrip = sorted.find(
-      (t) => new Date(t.planned_departure_time).getTime() > newMs,
-    );
-
-    // ── Kiểm tra so với chuyến TRƯỚC ──
-    if (prevTrip) {
-      const prevMs = new Date(prevTrip.planned_departure_time).getTime();
-      const gapMinutes = (newMs - prevMs) / (1000 * 60);
-
-      if (gapMinutes < MIN_GAP_MINUTES) {
-        const earliest = new Date(prevMs + MIN_GAP_MINUTES * 60 * 1000);
-        return jsonResponse(
-          {
-            error: `Xe cần nghỉ ít nhất 2h30p giữa 2 chuyến. ` +
-              `Chuyến ${prevTrip.trip_code} lúc ${
-                fmt(new Date(prevTrip.planned_departure_time))
-              }, ` +
-              `sớm nhất có thể thêm chuyến từ ${fmt(earliest)}.`,
-            conflict: prevTrip,
-            min_gap_minutes: MIN_GAP_MINUTES,
-            earliest_allowed: earliest.toISOString(),
-          },
-          409,
-        );
-      }
-
-      // Sau chuyến trước, xe đang ở điểm đến của chuyến đó.
-      const prevDest = prevTrip.route?.destination;
-      if (prevDest && prevDest !== route.origin) {
-        return jsonResponse(
-          {
-            error: `Sau chuyến ${prevTrip.trip_code}, xe đang ở ${prevDest}. ` +
-              `Không thể tạo chuyến xuất phát từ ${route.origin}.`,
-            conflict: prevTrip,
-          },
-          409,
-        );
-      }
+    // Sau chuyến mới, xe sẽ ở điểm đến của chuyến mới.
+    // Chuyến tiếp theo phải xuất phát từ đúng điểm đó.
+    const nextOrigin = nextTrip.route?.origin;
+    if (nextOrigin && route.destination !== nextOrigin) {
+      return json(
+        {
+          error: `Sau chuyến mới, xe sẽ ở ${route.destination} ` +
+            `nhưng chuyến ${nextTrip.trip_code} xuất phát từ ${nextOrigin}. ` +
+            `Vị trí không khớp.`,
+          conflict: nextTrip,
+        },
+        409,
+      );
     }
-
-    // ── Kiểm tra so với chuyến SAU ──
-    if (nextTrip) {
-      const nextMs = new Date(nextTrip.planned_departure_time).getTime();
-      const gapMinutes = (nextMs - newMs) / (1000 * 60);
-
-      if (gapMinutes < MIN_GAP_MINUTES) {
-        return jsonResponse(
-          {
-            error:
-              `Chuyến ${nextTrip.trip_code} lúc ${
-                fmt(new Date(nextTrip.planned_departure_time))
-              } ` +
-              `chỉ cách chuyến mới ${
-                Math.round(gapMinutes)
-              } phút (cần tối thiểu 2h30p).`,
-            conflict: nextTrip,
-            min_gap_minutes: MIN_GAP_MINUTES,
-          },
-          409,
-        );
-      }
-
-      // Sau chuyến mới, xe sẽ ở điểm đến của chuyến mới.
-      // Chuyến tiếp theo phải xuất phát từ đúng điểm đó.
-      const nextOrigin = nextTrip.route?.origin;
-      if (nextOrigin && route.destination !== nextOrigin) {
-        return jsonResponse(
-          {
-            error: `Sau chuyến mới, xe sẽ ở ${route.destination} ` +
-              `nhưng chuyến ${nextTrip.trip_code} xuất phát từ ${nextOrigin}. ` +
-              `Vị trí không khớp.`,
-            conflict: nextTrip,
-          },
-          409,
-        );
-      }
-    }
-
-    // ---- Insert trip ----
-    const finalTripCode = trip_code && trip_code.trim().length > 0
-      ? trip_code.trim()
-      : `TRIP-${Date.now()}`;
-
-    const { data: inserted, error: insertError } = await supabase
-      .from("trips")
-      .insert({
-        trip_code: finalTripCode,
-        route_id,
-        vehicle_id,
-        planned_departure_time,
-        trip_status: "scheduled",
-      })
-      .select()
-      .single();
-
-    if (insertError) {
-      return jsonResponse({ error: insertError.message }, 500);
-    }
-
-    return jsonResponse({ trip: inserted }, 201);
-  } catch (err) {
-    return jsonResponse(
-      { error: err instanceof Error ? err.message : "Unknown error" },
-      500,
-    );
   }
+
+  // ---- Insert trip ----
+  const finalTripCode = trip_code && trip_code.trim().length > 0
+    ? trip_code.trim()
+    : `TRIP-${Date.now()}`;
+
+  const { data: inserted, error: insertError } = await supabase
+    .from("trips")
+    .insert({
+      trip_code: finalTripCode,
+      route_id,
+      vehicle_id,
+      planned_departure_time,
+      trip_status: "scheduled",
+    })
+    .select()
+    .single();
+
+  if (insertError) {
+    return json({ error: insertError.message }, 500);
+  }
+
+  return json({ trip: inserted }, 201);
 });

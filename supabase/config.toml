@@ -420,7 +420,7 @@ verify_jwt = false
 import_map = "./functions/register-booking/deno.json"
 entrypoint = "./functions/register-booking/index.ts"
 
-# Tự verify caller admin/staff bằng token trong body handler (như create-account)
+# Tự verify caller admin/staff bên trong (_shared/verifyCaller.ts)
 [functions.cancel-booking]
 enabled = true
 verify_jwt = false
@@ -437,16 +437,20 @@ entrypoint = "./functions/get-pending-bookings/index.ts"
 # Specifies static files to be bundled with the function. Supports glob patterns.
 # For example, if you want to serve static HTML pages in your function:
 # static_files = [ "./functions/get-pending-bookings/*.html" ]
+# Tự verify caller admin/staff bên trong (_shared/verifyCaller.ts) — gateway
+# verify_jwt không đủ vì anon key cũng là JWT hợp lệ.
 [functions.schedule-trip]
 enabled = true
 verify_jwt = false
 import_map = "./functions/schedule-trip/deno.json"
-# Uncomment to specify a custom file path to the entrypoint.
-# Supported file extensions are: .ts, .js, .mjs, .jsx, .tsx
 entrypoint = "./functions/schedule-trip/index.ts"
-# Specifies static files to be bundled with the function. Supports glob patterns.
-# For example, if you want to serve static HTML pages in your function:
-# static_files = [ "./functions/schedule-trip/*.html" ]
+
+# Tự verify caller admin/staff bên trong (_shared/verifyCaller.ts, như schedule-trip)
+[functions.create-booking]
+enabled = true
+verify_jwt = false
+import_map = "./functions/create-booking/deno.json"
+entrypoint = "./functions/create-booking/index.ts"
 [functions.create-account]
 enabled = true
 # verify_jwt = false vì function tự xác thực + kiểm tra role admin bên trong

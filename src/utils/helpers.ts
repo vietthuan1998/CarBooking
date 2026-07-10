@@ -38,12 +38,16 @@ export function formatTime(isoString: string | null): string {
   return d.toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" });
 }
 
-export function todayDateInputValue(): string {
-  const d = new Date();
+/** yyyy-MM-dd theo LOCAL time (toISOString sẽ lệch ngày với giờ VN sáng sớm). */
+export function dateInputValue(d: Date): string {
   const yyyy = d.getFullYear();
   const mm = String(d.getMonth() + 1).padStart(2, "0");
   const dd = String(d.getDate()).padStart(2, "0");
   return `${yyyy}-${mm}-${dd}`;
+}
+
+export function todayDateInputValue(): string {
+  return dateInputValue(new Date());
 }
 
 /**

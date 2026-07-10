@@ -1,5 +1,5 @@
 import type { SupabaseClient } from "jsr:@supabase/supabase-js@2";
-import { HttpError, orThrow500 } from "./http.ts";
+import { HttpError, orThrow500 } from "../../_shared/http.ts";
 
 interface RouteRow {
   id: string;
@@ -38,7 +38,9 @@ export async function resolveBookingRoute(
     throw new HttpError(409, "Tuyến đã ngừng hoạt động");
   }
 
-  if (trip.route && getRouteDirection(route) !== getRouteDirection(trip.route)) {
+  if (
+    trip.route && getRouteDirection(route) !== getRouteDirection(trip.route)
+  ) {
     throw new HttpError(
       400,
       "Tuyến chọn không cùng chiều với chuyến xe",

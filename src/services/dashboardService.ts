@@ -1,9 +1,10 @@
 import { supabase } from "../utils/supabase";
+import { invokeEdgeFunction } from "../utils/edgeFunctions";
 
 import type {
   DashboardStats,
   RunningTrip,
-  // PendingBooking,
+  PendingBooking,
   UpcomingTrip,
 } from "../features/dashboard/types";
 function getDayRange(date: Date) {
@@ -180,18 +181,9 @@ export async function getRunningTrips(date: Date): Promise<RunningTrip[]> {
 /** Khách trong ngày (pending trước, confirmed sau) theo requested_departure_time. */
 export async function getPendingBookings2(date: Date) {
   const { startISO, endISO } = getDayRange(date);
-  try {
-    const { data, error } = await supabase.functions.invoke(
-      "get-pending-bookings",
-      {
-        body: { start: startISO, end: endISO },
-      },
-    );
-    if (error) throw error;
-    return data;
-  } catch (error) {
-    console.error("Error fetching pending bookings:", error);
-    throw error;
-  }
+  return invokeEdgeFunction<PendingBooking[]>("get-pending-bookings", {
+    start: startISO,
+    end: endISO,
+  });
 }
 

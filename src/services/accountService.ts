@@ -1,4 +1,5 @@
 import { supabase } from "../utils/supabase";
+import { invokeEdgeFunction } from "../utils/edgeFunctions";
 import type { Profile } from "./authService";
 
 export type { Profile };
@@ -55,7 +56,7 @@ export async function updateProfile(
 export async function createAccount(
   input: CreateAccountInput,
 ): Promise<Profile> {
-  const data = await invokeAccountFunction("create-account", input);
+  const data = await invokeEdgeFunction("create-account", input);
   return data.profile as Profile;
 }
 
@@ -66,28 +67,8 @@ export async function createAccount(
  * Trả về mật khẩu mới để hiển thị cho người thao tác.
  */
 export async function resetPassword(userId: string): Promise<string> {
-  const data = await invokeAccountFunction("reset-password", {
+  const data = await invokeEdgeFunction("reset-password", {
     user_id: userId,
   });
   return data.new_password as string;
-}
-
-async function invokeAccountFunction(
-  name: string,
-  body: object,
-): Promise<Record<string, unknown>> {
-  const { data, error } = await supabase.functions.invoke(name, { body });
-  if (error) {
-    // Edge Function trả lỗi qua body JSON { error: "..." } kể cả khi status
-    // không phải 2xx; supabase-js không tự parse nội dung đó vào `error`,
-    // nên phải tự đọc lại response body để lấy thông báo lỗi tiếng Việt cụ thể.
-    const context = (error as { context?: Response }).context;
-    const message = await context?.json?.().then(
-      (b: { error?: string }) => b?.error,
-      () => undefined,
-    );
-    throw new Error(message ?? error.message);
-  }
-  if (data?.error) throw new Error(data.error);
-  return data;
 }

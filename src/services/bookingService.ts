@@ -1,7 +1,11 @@
-import axios from "axios";
 import { supabase } from "@/utils/supabase";
-import { edgeFunctionClient } from "@/utils/axiosClient";
-import type { Customer, Route, Trip } from "@/features/booking/types";
+import { invokeEdgeFunction } from "@/utils/edgeFunctions";
+import type {
+  Customer,
+  PendingOnlineBooking,
+  Route,
+  Trip,
+} from "@/features/booking/types";
 
 export interface TripSeatRow {
   id: string;
@@ -121,6 +125,8 @@ export async function searchCustomersByPhone(
 }
 
 export interface CreateBookingInput {
+  // Có booking_id = gán booking online pending vào chuyến (bỏ qua customer_*).
+  booking_id?: string;
   // Khách mới: name/phone/note. Khách đã có: customer_id.
   customer_id?: string;
   customer_name?: string;
@@ -133,30 +139,41 @@ export interface CreateBookingInput {
   route_id: string;
 }
 
+/**
+ * Tra booking online chờ xếp xe theo mã (staff copy mã từ dashboard dán vào
+ * form đặt vé). Chỉ khớp bản còn pending + chưa gắn chuyến; trả null nếu
+ * không có (mã sai, đã xử lý, hoặc đã xếp xe).
+ */
+export async function findPendingBookingByCode(
+  code: string,
+): Promise<PendingOnlineBooking | null> {
+  const { data, error } = await supabase
+    .from("bookings")
+    .select(
+      `id, booking_code, seat_count, note, requested_departure_time,
+       pickup_address, dropoff_address, route_id,
+       customer:customers(id, full_name, phone)`,
+    )
+    .eq("booking_code", code)
+    .eq("status", "pending")
+    .is("trip_id", null)
+    .maybeSingle();
+  if (error) throw error;
+  return (data as unknown as PendingOnlineBooking) ?? null;
+}
+
 // Đặt vé qua Edge Function (upsert customer + check ghế + insert booking
 // nguyên tử ở server). Ném Error với message tiếng Việt từ server nếu lỗi.
 export async function createBooking(input: CreateBookingInput): Promise<void> {
-  try {
-    await edgeFunctionClient.post("/create-booking", input);
-  } catch (err: unknown) {
-    throw new Error(edgeErrorMessage(err), { cause: err });
-  }
+  await invokeEdgeFunction("create-booking", input, "Không thể đặt vé");
 }
 
 // Hủy booking qua Edge Function (đổi status + nhả ghế phải đi cùng nhau).
 // Server chặn hủy khi chuyến đã khởi hành (khách đã được đón) — trả 409.
 export async function cancelBooking(bookingId: string): Promise<void> {
-  try {
-    await edgeFunctionClient.post("/cancel-booking", { booking_id: bookingId });
-  } catch (err: unknown) {
-    throw new Error(edgeErrorMessage(err), { cause: err });
-  }
-}
-
-function edgeErrorMessage(err: unknown): string {
-  return axios.isAxiosError(err)
-    ? (err.response?.data?.error ?? err.message)
-    : err instanceof Error
-    ? err.message
-    : "Có lỗi xảy ra";
+  await invokeEdgeFunction(
+    "cancel-booking",
+    { booking_id: bookingId },
+    "Không thể hủy vé",
+  );
 }
