@@ -19,11 +19,14 @@ export function CustomerForm({ form, onChange }: Props) {
 
   const phone = form.customer_phone.trim();
   const linked = !form.isNewCustomer && !!form.customer_id;
+  // Chế độ gán booking online: khách lấy từ đăng ký của khách, không cho sửa
+  // (muốn đổi khách thì bỏ chọn booking ở picker phía trên).
+  const fromOnlineBooking = !!form.booking_id;
 
   useEffect(() => {
     // Đã liên kết khách có sẵn thì không search nữa (setTimeout 0 để tránh
     // setState đồng bộ trong effect — như CustomerSearch cũ)
-    if (linked || phone.length < 3) {
+    if (fromOnlineBooking || linked || phone.length < 3) {
       const t = setTimeout(() => setResults([]), 0);
       return () => clearTimeout(t);
     }
@@ -38,7 +41,7 @@ export function CustomerForm({ form, onChange }: Props) {
       }
     }, 300);
     return () => clearTimeout(timer);
-  }, [phone, linked]);
+  }, [phone, linked, fromOnlineBooking]);
 
   const handleSelect = (c: Customer) => {
     onChange({
@@ -63,10 +66,11 @@ export function CustomerForm({ form, onChange }: Props) {
             aria-label="Số điện thoại khách hàng"
             placeholder="Số điện thoại *"
             value={form.customer_phone}
+            disabled={fromOnlineBooking}
             onChange={(e) =>
               onChange({ customer_phone: e.target.value, ...unlink })
             }
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50 disabled:text-gray-500"
           />
           {loading && (
             <div className="absolute right-3 top-2.5">
@@ -91,18 +95,21 @@ export function CustomerForm({ form, onChange }: Props) {
               ))}
             </ul>
           )}
-          {linked && (
+          {/* {linked && (
             <p className="mt-1 text-xs text-emerald-600">
               ✓ Khách có sẵn — sửa SĐT hoặc tên sẽ chuyển thành khách mới.
             </p>
-          )}
+          )} */}
         </div>
         <input
           aria-label="Họ và tên khách hàng"
           placeholder="Họ và tên *"
           value={form.customer_name}
-          onChange={(e) => onChange({ customer_name: e.target.value, ...unlink })}
-          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          disabled={fromOnlineBooking}
+          onChange={(e) =>
+            onChange({ customer_name: e.target.value, ...unlink })
+          }
+          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50 disabled:text-gray-500"
         />
         <input
           aria-label="Ghi chú"

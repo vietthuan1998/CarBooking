@@ -1,5 +1,5 @@
 import type { SupabaseClient } from "jsr:@supabase/supabase-js@2";
-import { HttpError, orThrow500 } from "./http.ts";
+import { HttpError, orThrow500 } from "../../_shared/http.ts";
 
 export async function resolveCustomerId(
   supabase: SupabaseClient,

@@ -90,6 +90,8 @@ export function useTripBooking({
   const handleReset = () => {
     setSelectedSeatOrders([]);
     onFormChange({
+      booking_id: "",
+      booking_code: "",
       customer_id: "",
       customer_name: "",
       customer_phone: "",
@@ -128,12 +130,22 @@ export function useTripBooking({
         return orderToSeatId[o];
       })
       .filter(Boolean);
+    const assigning = !!form.booking_id;
     try {
       await createBooking({
-        customer_id: form.isNewCustomer ? undefined : form.customer_id,
-        customer_name: form.isNewCustomer ? form.customer_name : undefined,
-        customer_phone: form.isNewCustomer ? form.customer_phone : undefined,
-        customer_note: form.isNewCustomer
+        // Chế độ gán booking online: server dùng khách có sẵn của booking,
+        // bỏ qua customer_*.
+        booking_id: assigning ? form.booking_id : undefined,
+        customer_id: assigning || form.isNewCustomer
+          ? undefined
+          : form.customer_id,
+        customer_name: !assigning && form.isNewCustomer
+          ? form.customer_name
+          : undefined,
+        customer_phone: !assigning && form.isNewCustomer
+          ? form.customer_phone
+          : undefined,
+        customer_note: !assigning && form.isNewCustomer
           ? form.customer_note || undefined
           : undefined,
         trip_id: trip.id,
@@ -145,7 +157,11 @@ export function useTripBooking({
 
       await loadSeats();
       handleReset();
-      onSuccess("Đặt vé thành công!");
+      onSuccess(
+        assigning
+          ? `Đã gán ${form.booking_code} vào chuyến!`
+          : "Đặt vé thành công!",
+      );
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : "Có lỗi xảy ra";
       setFormError(msg);

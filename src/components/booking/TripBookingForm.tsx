@@ -1,5 +1,6 @@
 import { CustomerForm } from "./CustomerForm";
 import { BookingFormFields } from "./BookingForm";
+import { PendingBookingCodeInput } from "./PendingBookingCodeInput";
 import type { BookingForm, Route } from "@/features/booking/types";
 
 interface Props {
@@ -29,6 +30,11 @@ export function TripBookingForm({
 }: Props) {
   return (
     <div className="px-4 pb-4 border-t border-gray-100 pt-3 space-y-4">
+      <PendingBookingCodeInput
+        routes={routes}
+        form={form}
+        onChange={onFormChange}
+      />
       <CustomerForm form={form} onChange={onFormChange} />
       <BookingFormFields
         form={form}
@@ -56,7 +62,11 @@ export function TripBookingForm({
           {submitting && (
             <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
           )}
-          {submitting ? "Đang xử lý..." : "Xác nhận đặt vé"}
+          {submitting
+            ? "Đang xử lý..."
+            : form.booking_id
+            ? "Gán vào chuyến"
+            : "Xác nhận đặt vé"}
         </button>
       </div>
     </div>

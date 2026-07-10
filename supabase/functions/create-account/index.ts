@@ -23,120 +23,96 @@
 
 import { createAdminClient } from "../_shared/adminClient.ts";
 import { verifyCaller } from "../_shared/verifyCaller.ts";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
-};
-
-function json(body: unknown, status = 200) {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
-  });
-}
+import { json, servePost } from "../_shared/http.ts";
 
 const VALID_ROLES = ["admin", "staff", "driver"] as const;
 type Role = (typeof VALID_ROLES)[number];
 
-Deno.serve(async (req: Request) => {
-  if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
+servePost(async (req: Request) => {
+  // Service role: cần để gọi auth.admin.createUser() và đọc profiles
+  // bất kể RLS, sau khi đã tự xác thực + kiểm tra quyền người gọi bên dưới.
+  const admin = createAdminClient();
+
+  // ---- Xác thực người gọi ----
+  const caller = await verifyCaller(
+    req,
+    admin,
+    ["admin"],
+    "Chỉ admin mới có quyền tạo tài khoản",
+  );
+  if (!caller.ok) return json({ error: caller.message }, caller.status);
+
+  // ---- Validate input ----
+  const body = await req.json().catch(() => null);
+  if (!body) return json({ error: "Request body không hợp lệ" }, 400);
+
+  const email = typeof body.email === "string" ? body.email.trim() : "";
+  const password = typeof body.password === "string" ? body.password : "";
+  const fullName = typeof body.full_name === "string"
+    ? body.full_name.trim()
+    : "";
+  const phone = typeof body.phone === "string" && body.phone.trim()
+    ? body.phone.trim()
+    : null;
+  const role = body.role as Role;
+
+  if (!email) return json({ error: "Thiếu email" }, 400);
+  if (!password || password.length < 6) {
+    return json({ error: "Mật khẩu phải có ít nhất 6 ký tự" }, 400);
   }
-  if (req.method !== "POST") return json({ error: "Method not allowed" }, 405);
-
-  try {
-    // Service role: cần để gọi auth.admin.createUser() và đọc profiles
-    // bất kể RLS, sau khi đã tự xác thực + kiểm tra quyền người gọi bên dưới.
-    const admin = createAdminClient();
-
-    // ---- Xác thực người gọi ----
-    const caller = await verifyCaller(
-      req,
-      admin,
-      ["admin"],
-      "Chỉ admin mới có quyền tạo tài khoản",
-    );
-    if (!caller.ok) return json({ error: caller.message }, caller.status);
-
-    // ---- Validate input ----
-    const body = await req.json().catch(() => null);
-    if (!body) return json({ error: "Request body không hợp lệ" }, 400);
-
-    const email = typeof body.email === "string" ? body.email.trim() : "";
-    const password = typeof body.password === "string" ? body.password : "";
-    const fullName =
-      typeof body.full_name === "string" ? body.full_name.trim() : "";
-    const phone =
-      typeof body.phone === "string" && body.phone.trim()
-        ? body.phone.trim()
-        : null;
-    const role = body.role as Role;
-
-    if (!email) return json({ error: "Thiếu email" }, 400);
-    if (!password || password.length < 6) {
-      return json({ error: "Mật khẩu phải có ít nhất 6 ký tự" }, 400);
-    }
-    if (!VALID_ROLES.includes(role)) {
-      return json(
-        { error: "role phải là một trong: " + VALID_ROLES.join(", ") },
-        400,
-      );
-    }
-    // Driver được phép trống tên: account tạo chỉ với email + mật khẩu,
-    // driver tự cập nhật thông tin sau trên app mobile.
-    if (!fullName && role !== "driver") {
-      return json({ error: "Thiếu họ và tên" }, 400);
-    }
-
-    // ---- Tạo user trong auth.users ----
-    // Trigger trg_on_auth_user_created sẽ tự tạo dòng profiles tương ứng.
-    const { data: created, error: createError } = await admin.auth.admin
-      .createUser({
-        email,
-        password,
-        email_confirm: true,
-        user_metadata: { full_name: fullName, phone, role },
-        app_metadata: { status: "active" },
-      });
-
-    if (createError) {
-      const status = createError.status === 422 ? 409 : 500;
-      return json({ error: createError.message }, status);
-    }
-    if (!created?.user) {
-      return json({ error: "Tạo tài khoản thất bại" }, 500);
-    }
-
-    // Trigger handle_new_user mặc định tạo profile 'inactive' (chờ duyệt cho
-    // tài khoản tự đăng ký). GoTrue merge app_metadata SAU khi insert user nên
-    // trigger không thấy status active ở trên — account do admin tạo phải
-    // kích hoạt tường minh ở đây.
-    const { error: activateError } = await admin
-      .from("profiles")
-      .update({ status: "active" })
-      .eq("id", created.user.id);
-
-    if (activateError) {
-      return json({ error: activateError.message }, 500);
-    }
-
-    const { data: profile, error: profileError } = await admin
-      .from("profiles")
-      .select("*")
-      .eq("id", created.user.id)
-      .single();
-
-    if (profileError) {
-      return json({ error: profileError.message }, 500);
-    }
-
-    return json({ profile }, 201);
-  } catch (err) {
+  if (!VALID_ROLES.includes(role)) {
     return json(
-      { error: err instanceof Error ? err.message : "Unknown error" },
-      500,
+      { error: "role phải là một trong: " + VALID_ROLES.join(", ") },
+      400,
     );
   }
+  // Driver được phép trống tên: account tạo chỉ với email + mật khẩu,
+  // driver tự cập nhật thông tin sau trên app mobile.
+  if (!fullName && role !== "driver") {
+    return json({ error: "Thiếu họ và tên" }, 400);
+  }
+
+  // ---- Tạo user trong auth.users ----
+  // Trigger trg_on_auth_user_created sẽ tự tạo dòng profiles tương ứng.
+  const { data: created, error: createError } = await admin.auth.admin
+    .createUser({
+      email,
+      password,
+      email_confirm: true,
+      user_metadata: { full_name: fullName, phone, role },
+      app_metadata: { status: "active" },
+    });
+
+  if (createError) {
+    const status = createError.status === 422 ? 409 : 500;
+    return json({ error: createError.message }, status);
+  }
+  if (!created?.user) {
+    return json({ error: "Tạo tài khoản thất bại" }, 500);
+  }
+
+  // Trigger handle_new_user mặc định tạo profile 'inactive' (chờ duyệt cho
+  // tài khoản tự đăng ký). GoTrue merge app_metadata SAU khi insert user nên
+  // trigger không thấy status active ở trên — account do admin tạo phải
+  // kích hoạt tường minh ở đây.
+  const { error: activateError } = await admin
+    .from("profiles")
+    .update({ status: "active" })
+    .eq("id", created.user.id);
+
+  if (activateError) {
+    return json({ error: activateError.message }, 500);
+  }
+
+  const { data: profile, error: profileError } = await admin
+    .from("profiles")
+    .select("*")
+    .eq("id", created.user.id)
+    .single();
+
+  if (profileError) {
+    return json({ error: profileError.message }, 500);
+  }
+
+  return json({ profile }, 201);
 });

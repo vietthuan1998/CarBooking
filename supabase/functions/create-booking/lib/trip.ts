@@ -1,5 +1,5 @@
 import type { SupabaseClient } from "jsr:@supabase/supabase-js@2";
-import { HttpError, orThrow500 } from "./http.ts";
+import { HttpError, orThrow500 } from "../../_shared/http.ts";
 
 interface TripWithRoute {
   id: string;
@@ -14,14 +14,19 @@ export async function assertTripBookable(
 ): Promise<TripWithRoute> {
   const { data: trip, error } = await supabase
     .from("trips")
-    .select("id, trip_status, planned_departure_time, route:routes(origin, destination)")
+    .select(
+      "id, trip_status, planned_departure_time, route:routes(origin, destination)",
+    )
     .eq("id", tripId)
     .maybeSingle();
 
   orThrow500(error);
   if (!trip) throw new HttpError(404, "trip_id không tồn tại");
   if (trip.trip_status !== "scheduled") {
-    throw new HttpError(409, `Chuyến xe không thể đặt (trạng thái: ${trip.trip_status})`);
+    throw new HttpError(
+      409,
+      `Chuyến xe không thể đặt (trạng thái: ${trip.trip_status})`,
+    );
   }
   return trip as unknown as TripWithRoute;
 }
@@ -43,7 +48,10 @@ export async function getAvailableTripSeats(
   if (tripSeats.length !== seatIds.length) {
     const found = tripSeats.map((ts) => ts.seat_id);
     const missing = seatIds.filter((id) => !found.includes(id));
-    throw new HttpError(400, `Ghế không thuộc chuyến này: ${missing.join(", ")}`);
+    throw new HttpError(
+      400,
+      `Ghế không thuộc chuyến này: ${missing.join(", ")}`,
+    );
   }
 
   const taken = tripSeats.filter((ts) => ts.status !== "available");

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Check, Copy } from "lucide-react";
 import { formatDateTime } from "@/utils/helpers";
 import type { PendingBooking } from "../../features/dashboard/types";
 
@@ -9,6 +10,18 @@ type Props = {
 
 export function PendingBookingsTable({ bookings, onCancel }: Props) {
   const [cancellingId, setCancellingId] = useState<string | null>(null);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+
+  // Copy mã để dán vào ô "Mã booking online" trên trang Đặt vé (gán vào chuyến)
+  const handleCopy = async (booking: PendingBooking) => {
+    try {
+      await navigator.clipboard.writeText(booking.booking_code);
+      setCopiedId(booking.id);
+      setTimeout(() => setCopiedId((id) => (id === booking.id ? null : id)), 1500);
+    } catch {
+      // clipboard bị chặn (http/quyền) — staff vẫn bôi đen copy tay được
+    }
+  };
 
   const handleCancel = async (booking: PendingBooking) => {
     setCancellingId(booking.id);
@@ -86,7 +99,21 @@ export function PendingBookingsTable({ bookings, onCancel }: Props) {
                 return (
                   <tr key={booking.id} className="hover:bg-slate-50">
                     <td className="whitespace-nowrap px-4 py-4 text-sm font-semibold text-slate-900">
-                      {booking.booking_code}
+                      <span className="inline-flex items-center gap-1.5">
+                        {booking.booking_code}
+                        <button
+                          type="button"
+                          onClick={() => handleCopy(booking)}
+                          title="Copy mã — dán vào ô 'Mã booking online' trên trang Đặt vé để gán vào chuyến"
+                          className="text-slate-400 transition-colors hover:text-slate-700"
+                        >
+                          {copiedId === booking.id ? (
+                            <Check className="h-3.5 w-3.5 text-emerald-600" />
+                          ) : (
+                            <Copy className="h-3.5 w-3.5" />
+                          )}
+                        </button>
+                      </span>
                     </td>
                     <td className="whitespace-nowrap px-4 py-4 text-sm text-slate-600">
                       {booking.customer?.full_name}
@@ -99,11 +126,11 @@ export function PendingBookingsTable({ bookings, onCancel }: Props) {
                     </td>
                     <td className="whitespace-nowrap px-4 py-4 text-sm text-slate-600">
                       {formatDateTime(booking.requested_departure_time)}
-                      {!booking.trip && (
+                      {/* {!booking.trip && (
                         <span className="ml-2 rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-500">
                           chưa xếp xe
                         </span>
-                      )}
+                      )} */}
                     </td>
                     <td className="whitespace-nowrap px-4 py-4 text-center text-sm text-slate-600">
                       {booking.seat_count ?? "—"}

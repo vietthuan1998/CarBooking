@@ -1,6 +1,11 @@
 import { supabase } from "@/utils/supabase";
 import { invokeEdgeFunction } from "@/utils/edgeFunctions";
-import type { Customer, Route, Trip } from "@/features/booking/types";
+import type {
+  Customer,
+  PendingOnlineBooking,
+  Route,
+  Trip,
+} from "@/features/booking/types";
 
 export interface TripSeatRow {
   id: string;
@@ -120,6 +125,8 @@ export async function searchCustomersByPhone(
 }
 
 export interface CreateBookingInput {
+  // Có booking_id = gán booking online pending vào chuyến (bỏ qua customer_*).
+  booking_id?: string;
   // Khách mới: name/phone/note. Khách đã có: customer_id.
   customer_id?: string;
   customer_name?: string;
@@ -130,6 +137,29 @@ export interface CreateBookingInput {
   pickup_address: string;
   dropoff_address: string;
   route_id: string;
+}
+
+/**
+ * Tra booking online chờ xếp xe theo mã (staff copy mã từ dashboard dán vào
+ * form đặt vé). Chỉ khớp bản còn pending + chưa gắn chuyến; trả null nếu
+ * không có (mã sai, đã xử lý, hoặc đã xếp xe).
+ */
+export async function findPendingBookingByCode(
+  code: string,
+): Promise<PendingOnlineBooking | null> {
+  const { data, error } = await supabase
+    .from("bookings")
+    .select(
+      `id, booking_code, seat_count, note, requested_departure_time,
+       pickup_address, dropoff_address, route_id,
+       customer:customers(id, full_name, phone)`,
+    )
+    .eq("booking_code", code)
+    .eq("status", "pending")
+    .is("trip_id", null)
+    .maybeSingle();
+  if (error) throw error;
+  return (data as unknown as PendingOnlineBooking) ?? null;
 }
 
 // Đặt vé qua Edge Function (upsert customer + check ghế + insert booking
