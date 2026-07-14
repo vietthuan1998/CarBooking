@@ -24,6 +24,7 @@
 import { createAdminClient } from "../_shared/adminClient.ts";
 import { verifyCaller } from "../_shared/verifyCaller.ts";
 import { json, servePost } from "../_shared/http.ts";
+import { notifyTripDriver } from "../_shared/push.ts";
 import { validateBookingRequest } from "./lib/validate.ts";
 import { resolveCustomerId } from "./lib/customer.ts";
 import { assertTripBookable, getAvailableTripSeats } from "./lib/trip.ts";
@@ -80,6 +81,11 @@ servePost(async (req: Request) => {
       () => revertBookingAssignment(supabase, original),
     );
     // Không log tay: trigger trg_log_booking_status đã ghi pending → confirmed.
+    await notifyTripDriver(supabase, request.trip_id, {
+      title: "Có khách mới trên chuyến của bạn",
+      body:
+        `${trip.trip_code}: ${request.seat_ids.length} ghế vừa được đặt (khách online).`,
+    });
     return json({ booking }, 200);
   }
 
@@ -97,6 +103,11 @@ servePost(async (req: Request) => {
     await supabase.from("bookings").delete().eq("id", booking.id);
   });
   await logBookingCreated(supabase, booking.id);
+
+  await notifyTripDriver(supabase, request.trip_id, {
+    title: "Có khách mới trên chuyến của bạn",
+    body: `${trip.trip_code}: ${request.seat_ids.length} ghế vừa được đặt.`,
+  });
 
   return json({ booking }, 201);
 });
