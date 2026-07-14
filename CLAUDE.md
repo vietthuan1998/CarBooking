@@ -81,11 +81,13 @@ supabase/
     20260709030000*                  # bookings.seat_count + bookings.note (đăng ký online từ landing)
     20260709040000*                  # anon SELECT routes active (landing load tuyến bằng anon key)
     20260709050000*                  # bookings.trip_id nullable + requested_departure_time (khách chọn giờ tự do, staff xếp xe sau; backfill từ trips)
+    20260714015728*                  # device_tokens: FCM token thiết bị app driver (unique token, RLS user tự quản lý; grant tường minh vì bảng mới không auto-expose)
   functions/              # Deno edge functions, service_role bypass RLS (trừ get-pending-bookings dùng JWT user) → PHẢI tự verify caller trừ khi cố ý public; tên phải kebab-case/lowercase — CLI (Viper) lowercase key trong config.toml, tên camelCase sẽ bị deploy thành 2 function
     _shared/verifyCaller.ts  # verifyCaller(req, admin, allowedRoles, forbiddenMessage?): getUser từ Authorization token + check profiles role/status active, trả {userId, role}; dùng ở CẢ 5 fn cần auth; gateway verify_jwt KHÔNG đủ (anon key cũng là JWT hợp lệ)
     _shared/adminClient.ts   # createAdminClient(): client service role (bypass RLS) — dùng ở mọi fn trừ get-pending-bookings (fn đó tạo client anon + forward JWT user để RLS áp dụng)
     _shared/http.ts          # corsHeaders, json(), HttpError, orThrow500, servePost(handler) — gom OPTIONS/405/try-catch; mọi fn đều serve qua servePost
     _shared/bookingCode.ts   # generateBookingCode() dùng chung create-booking + register-booking
+    _shared/push.ts          # FCM HTTP v1: sendPushToUser(userId) + notifyTripDriver(tripId → vehicles.driver_id); cần secret FCM_SERVICE_ACCOUNT (chưa set → tự bỏ qua); NUỐT lỗi (push là side-effect, không được fail nghiệp vụ); tự xóa token UNREGISTERED; gọi từ schedule-trip/create-booking/cancel-booking
     create-booking/       # verify caller admin/staff (_shared) → index.ts orchestrate; lib/: validate → trip (check bookable+ghế) → route → 2 nhánh: TẠO MỚI (upsert customer theo phone + insert + log tay) HOẶC GÁN booking online (body có booking_id: update booking pending trip_id NULL → confirmed + trip + ghế; race-guard bằng điều kiện WHERE, rollback trả về pending; trigger tự log)
     schedule-trip/        # verify caller admin/staff (_shared) → tạo trip: check gap ≥150p giữa 2 chuyến cùng xe + check vị trí xe (dest chuyến trước = origin chuyến mới); cần đọc trực tiếp khi sửa
     create-account/       # verify caller admin (_shared) → auth.admin.createUser + update profile sang active (trigger tạo profile 'inactive')

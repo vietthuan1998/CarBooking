@@ -10,6 +10,7 @@
 import { createAdminClient } from "../_shared/adminClient.ts";
 import { verifyCaller } from "../_shared/verifyCaller.ts";
 import { json, servePost } from "../_shared/http.ts";
+import { notifyTripDriver } from "../_shared/push.ts";
 
 servePost(async (req: Request) => {
   const admin = createAdminClient();
@@ -33,7 +34,7 @@ servePost(async (req: Request) => {
   // ---- Load booking + trạng thái chuyến (trip NULL = online chưa xếp xe) ----
   const { data: booking, error: bookingError } = await admin
     .from("bookings")
-    .select("id, status, trip:trips(id, trip_status)")
+    .select("id, status, trip:trips(id, trip_code, trip_status)")
     .eq("id", bookingId)
     .maybeSingle();
   if (bookingError) return json({ error: bookingError.message }, 500);
@@ -47,7 +48,9 @@ servePost(async (req: Request) => {
   }
   // Đã gắn chuyến mà chuyến khởi hành rồi = khách đã được đón → không cho hủy.
   // Chưa xếp xe (trip null) thì hủy tự do.
-  const trip = booking.trip as unknown as { trip_status: string } | null;
+  const trip = booking.trip as unknown as
+    | { id: string; trip_code: string; trip_status: string }
+    | null;
   if (trip && trip.trip_status !== "scheduled") {
     return json(
       { error: "Chuyến đã khởi hành hoặc kết thúc — không thể hủy booking" },
@@ -74,6 +77,14 @@ servePost(async (req: Request) => {
       .update({ status: oldStatus })
       .eq("id", bookingId);
     return json({ error: seatError.message }, 500);
+  }
+
+  // Booking chưa xếp xe (trip null) thì không có tài xế nào cần biết.
+  if (trip) {
+    await notifyTripDriver(admin, trip.id, {
+      title: "Booking bị hủy",
+      body: `${trip.trip_code}: một booking vừa bị hủy, ghế đã được nhả.`,
+    });
   }
 
   return json({ ok: true }, 200);

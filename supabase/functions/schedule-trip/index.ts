@@ -21,6 +21,7 @@
 import { createAdminClient } from "../_shared/adminClient.ts";
 import { verifyCaller } from "../_shared/verifyCaller.ts";
 import { json, servePost } from "../_shared/http.ts";
+import { notifyTripDriver } from "../_shared/push.ts";
 
 servePost(async (req: Request) => {
   // Service role: bypass RLS để check toàn bộ trips + insert,
@@ -261,6 +262,20 @@ servePost(async (req: Request) => {
   if (insertError) {
     return json({ error: insertError.message }, 500);
   }
+
+  // Báo cho tài xế (chủ xe) — không throw, trip đã tạo xong thì push lỗi kệ nó.
+  const departureText = departureDate.toLocaleString("vi-VN", {
+    hour: "2-digit",
+    minute: "2-digit",
+    day: "2-digit",
+    month: "2-digit",
+    timeZone: "Asia/Ho_Chi_Minh",
+  });
+  await notifyTripDriver(supabase, inserted.id, {
+    title: "Chuyến mới được xếp cho xe của bạn",
+    body:
+      `${finalTripCode}: ${route.origin} → ${route.destination}, xuất phát ${departureText}`,
+  });
 
   return json({ trip: inserted }, 201);
 });
