@@ -84,7 +84,7 @@ servePost(async (req: Request) => {
     await notifyTripDriver(supabase, request.trip_id, {
       title: "Có khách mới trên chuyến của bạn",
       body:
-        `${trip.trip_code}: ${request.seat_ids.length} ghế vừa được đặt (khách online).`,
+        `${request.seat_ids.length} ghế được đặt (${route.origin} → ${route.destination}).`,
     });
     return json({ booking }, 200);
   }
@@ -106,7 +106,8 @@ servePost(async (req: Request) => {
 
   await notifyTripDriver(supabase, request.trip_id, {
     title: "Có khách mới trên chuyến của bạn",
-    body: `${trip.trip_code}: ${request.seat_ids.length} ghế vừa được đặt.`,
+    body:
+      `${request.seat_ids.length} ghế được đặt (${route.origin} → ${route.destination}).`,
   });
 
   return json({ booking }, 201);
